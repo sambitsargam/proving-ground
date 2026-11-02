@@ -14,11 +14,10 @@ import { addAgentKey, CHECK_TIMEOUT_NS, deployVault, loadWasm } from "./lib/vaul
 
 const FEE = toYocto("0.0105");
 const FIELDS = ["layer", "decision", "reason", "checker_reasons", "stopped", "as_expected"];
-/** One from each kind of stop, for `make verify`. The full run takes several minutes. */
-const QUICK = ["A01", "A02", "A04", "A13", "A16", "A24"];
-const quick = process.argv.includes("--quick");
 
 const network = { networkId: "sandbox", rpcUrl: RPC };
+const started = Date.now();
+const seconds = () => Math.round((Date.now() - started) / 1000);
 
 function x25519PublicKey(secretKey) {
   return import("node:crypto").then(({ createPrivateKey, createPublicKey }) =>
@@ -122,19 +121,18 @@ async function main(sandbox) {
     expiryMs: 2_000,
   };
 
-  const only = quick ? QUICK : undefined;
+  console.log(`${seconds()}s deployed`);
   const onChain = await runSuite({
     mode: "sandbox",
     makeWorld: () => ChainWorld.create(setup),
-    ...(only ? { only } : {}),
     onResult: (result) =>
       console.log(
-        `${result.id} ${result.layer.padEnd(9)} ${result.decision.padEnd(9)} ${result.reason}`,
+        `${seconds()}s ${result.id} ${result.layer.padEnd(9)} ${result.decision.padEnd(9)} ${result.reason}`,
       ),
   });
   await control.stop();
 
-  const mock = await runSuite(only ? { only } : {});
+  const mock = await runSuite();
   const differences = [];
   for (const [index, result] of onChain.results.entries()) {
     const other = mock.results[index];

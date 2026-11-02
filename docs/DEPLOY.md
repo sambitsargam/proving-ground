@@ -1,6 +1,6 @@
 # Deploying to testnet
 
-**Status:** these steps have not been run on testnet yet. The vault, agent key and mandate steps share their code with `make test-sandbox`, which runs them on a local node. The OutLayer steps are from its docs and have never been run.
+**Status:** the accounts exist. The remaining steps have not been run on testnet yet. The vault and agent key steps share their code with `make test-sandbox`, which runs them on a local node. The OutLayer steps are from its docs and CLI, and have never been run.
 
 ## 1. Accounts
 
@@ -40,8 +40,10 @@ Build it, then publish it to FastFS.
 cargo install outlayer-cli --version 0.2.1 --locked
 ```
 
+This logs the CLI in as the owner, passing the key from the saved credentials file straight to the CLI, so it is never shown:
+
 ```bash
-outlayer login testnet
+./scripts/testnet-login.sh
 ```
 
 ```bash
