@@ -15,7 +15,7 @@ export const RPC = `http://127.0.0.1:${PORT}`;
 
 export async function startSandbox() {
   const binary =
-    process.env.NEAR_SANDBOX_BIN ??
+    process.env.NEAR_SANDBOX_BIN_PATH ??
     globSync("target/debug/build/near-sandbox-*/out/.near/*/near-sandbox")[0];
   assert.ok(binary, "no near-sandbox binary: run `make test-contracts` first");
 
