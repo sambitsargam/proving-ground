@@ -4,7 +4,7 @@ Proving Ground treats the AI as untrusted. The question this document answers is
 
 **Short answer:** vault funds can only go to a payee the owner listed, within the limits the owner set, or back to the owner. A fully compromised agent or checker cannot change that. They can still cause a bad payment to a listed payee, within those limits, and they can waste fees and block payments.
 
-**Status:** the contract is implemented, and the defenses below that it enforces have tests against a mock of OutLayer. The checker has run as a real WASM against the live model. Nothing has run on testnet or inside the real OutLayer yet. Items that depend on that are marked *(pending live test)*.
+**Status:** the contract is implemented, and the defenses below that it enforces have tests against a mock of OutLayer. The checker has run as a real WASM against the live model. The attack suite runs the real contract on a simulated runtime. Nothing has run on testnet or inside the real OutLayer yet. Items that depend on that are marked *(pending live test)*.
 
 Rules and reason codes are defined in [MANDATES.md](MANDATES.md).
 
