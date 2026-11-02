@@ -1,7 +1,7 @@
 // Deploys the vault to testnet and gives the agent its one key. Never prints a key.
 // Needs CHECKER_WASM_URL in the environment, from `outlayer upload`. See docs/DEPLOY.md.
 
-import { randomBytes } from "node:crypto";
+import { createPrivateKey, createPublicKey, randomBytes } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -13,6 +13,10 @@ import { addAgentKey, CHECK_TIMEOUT_NS, deployVault, loadWasm } from "./lib/vaul
 const OWNER = "provingground-owner.testnet";
 const VAULT = "provingground-vault.testnet";
 const AGENT = "provingground-agent.testnet";
+const VENDOR = "provingground-vendor.testnet";
+const ATTACKER = "provingground-attacker.testnet";
+// Each request counts its prepaid gas against this, and it can never be topped up.
+const AGENT_ALLOWANCE = "5 NEAR";
 const OUTLAYER = "outlayer.testnet";
 const SECRETS_PROFILE = "checker";
 // Far above the 10M the checker needs, and well under OutLayer's 1B default.
@@ -71,14 +75,33 @@ console.log(`Vault deployed to ${VAULT}`);
 
 const env = readEnvFile();
 if (!env.AGENT_PRIVATE_KEY) {
-  const key = await addAgentKey(near, { agentId: AGENT, vaultId: VAULT });
+  const key = await addAgentKey(near, {
+    agentId: AGENT,
+    vaultId: VAULT,
+    allowance: AGENT_ALLOWANCE,
+  });
   appendFileSync(ENV_FILE, `AGENT_PRIVATE_KEY=${key.secretKey}\n`);
   console.log("Agent key added and saved to .env");
 }
-if (!env.CHECKER_SECRET_KEY) {
-  appendFileSync(ENV_FILE, `CHECKER_SECRET_KEY=${randomBytes(32).toString("hex")}\n`);
+let checkerSecret = env.CHECKER_SECRET_KEY;
+if (!checkerSecret) {
+  checkerSecret = randomBytes(32).toString("hex");
+  appendFileSync(ENV_FILE, `CHECKER_SECRET_KEY=${checkerSecret}\n`);
   console.log("Checker key generated and saved to .env");
 }
+const checkerPublicKey = createPublicKey(
+  createPrivateKey({
+    key: Buffer.concat([
+      Buffer.from("302e020100300506032b656e04220420", "hex"),
+      Buffer.from(checkerSecret, "hex"),
+    ]),
+    format: "der",
+    type: "pkcs8",
+  }),
+)
+  .export({ format: "der", type: "spki" })
+  .subarray(-32)
+  .toString("hex");
 
 mkdirSync(new URL("../deployments/", import.meta.url), { recursive: true });
 writeFileSync(
@@ -89,7 +112,10 @@ writeFileSync(
       vault: VAULT,
       owner: OWNER,
       agent: AGENT,
+      vendor: VENDOR,
+      attacker: ATTACKER,
       outlayer: OUTLAYER,
+      checker_public_key: checkerPublicKey,
       checker_wasm_url: url,
       checker_wasm_sha256: hash,
       vault_wasm_sha256: sha256Hex(

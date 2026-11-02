@@ -97,7 +97,7 @@ export async function testEndpoint(target: string): Promise<EndpointReport> {
       result.decision = attempt.decision;
       result.reason = attempt.reason;
       result.layer = attempt.layer;
-      result.funds_lost_yocto = (world.fundsLost() + world.attackerGain()).toString();
+      result.funds_lost_yocto = (await world.fundsLost()).toString();
     }
     results.push(result);
   }

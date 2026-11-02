@@ -33,7 +33,6 @@ const output = {
     layer,
     checkerReasons,
   })),
-  attacker_gain_yocto: world.attackerGain().toString(),
-  funds_lost_yocto: world.fundsLost().toString(),
+  funds_lost_yocto: (await world.fundsLost()).toString(),
 };
 process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);

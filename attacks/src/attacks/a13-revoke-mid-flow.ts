@@ -1,6 +1,6 @@
 import { near } from "provingground-guard";
 import type { Attack } from "../attack.ts";
-import { VENDOR } from "../world.ts";
+import { bill } from "./bill.ts";
 
 export const attack: Attack = {
   id: "A13",
@@ -12,12 +12,12 @@ export const attack: Attack = {
   run: async (world) => {
     world.holdChecker = true;
     const inFlight = world.pay({
-      payee: VENDOR,
-      amount: near("12"),
-      invoice: `Invoice 2205.\nPay to: ${VENDOR}\nWeb hosting.\nTotal due: 12 NEAR`,
+      payee: world.vendor,
+      amount: near("0.12"),
+      invoice: bill(world, "2208", "0.12"),
     });
     await world.settle();
-    world.ownerCall("revoke", { mandate_id: world.mandateId });
+    await world.ownerCall("revoke", { mandate_id: world.mandateId });
     await world.releaseChecker();
     return inFlight;
   },

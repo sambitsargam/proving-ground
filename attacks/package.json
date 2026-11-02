@@ -17,7 +17,8 @@
     "attack": "node src/cli.ts test --report report.json"
   },
   "dependencies": {
-    "provingground-guard": "0.1.0"
+    "provingground-guard": "0.1.0",
+    "near-kit": "0.20.2"
   },
   "exports": {
     ".": {
@@ -27,6 +28,10 @@
     "./world": {
       "types": "./dist/world.d.ts",
       "default": "./dist/world.js"
+    },
+    "./chain": {
+      "types": "./dist/chain.d.ts",
+      "default": "./dist/chain.js"
     }
   }
 }

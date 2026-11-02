@@ -4,19 +4,35 @@ import {
   Guard,
   hashInvoice,
   hashPurpose,
-  type Layer,
   type MandateTerms,
   MemoryBlobStore,
   near,
   type PaymentArgs,
-  type PayRequest,
   sha256Hex,
   toPayResult,
   type VaultEvent,
   type VaultOutcome,
 } from "provingground-guard";
-import { type ModelMode, standInModel } from "./model.ts";
+import type { Attempt, MandateOverrides, Pay, World } from "./attack.ts";
+import { CheckerLogic, wasmDir } from "./checker.ts";
+import type { ModelMode } from "./model.ts";
 import { NearRuntime, type Tx, type TxResult } from "./runtime.ts";
+import {
+  CHECK_TIMEOUT_NS,
+  CHECKER_BUDGET,
+  CHECKER_FEE,
+  DAILY_CAP,
+  DAY_NS,
+  FUNDING,
+  MAX_CHECKS_PER_DAY,
+  MAX_PER_PAYMENT,
+  MAX_REQUESTS,
+  MAX_TOTAL,
+  PAYROLL_PURPOSE,
+  PURPOSE,
+} from "./terms.ts";
+
+export type { Attempt, MandateOverrides, Pay } from "./attack.ts";
 
 export const VAULT = "vault.testnet";
 export const OWNER = "treasury.testnet";
@@ -26,51 +42,15 @@ export const PAYROLL = "payroll.testnet";
 export const ATTACKER = "attacker.testnet";
 const OUTLAYER = "outlayer.testnet";
 
-export const PURPOSE = "Monthly web hosting from Acme Hosting, up to 15 NEAR a month.";
-const PAYROLL_PURPOSE = "Contractor payroll for the engineering team.";
-export const DAILY_CAP = near("30");
-export const MAX_TOTAL = near("50");
-export const MAX_PER_PAYMENT = near("15");
-const CHECKER_FEE = near("0.04");
-const CHECKER_BUDGET = near("2");
-const DAY_NS = 86_400_000_000_000n;
-const FUNDING = near("50");
-/** More than storage and the checker budget need. `create` returns the surplus. */
-const CREATE_DEPOSIT = near("4");
-const YIELD_TIMEOUT_NS = 600_000_000_000n;
+/** More than storage and the checker budget need. `createMandate` returns the surplus. */
+const CREATE_DEPOSIT = near("1");
 
-const wasmDir = new URL("../wasm/", import.meta.url);
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 const load = (name: string) => readFileSync(new URL(name, wasmDir));
 
 export function wasmHashes(): { vault: string; checker: string } {
   return { vault: sha256Hex(load("vault.wasm")), checker: sha256Hex(load("checker.wasm")) };
-}
-
-/** One thing a compromised party tried, and what stopped it. */
-export interface Attempt {
-  tried: string;
-  layer: Layer;
-  decision: string;
-  reason: string;
-  checkerReasons: string[];
-}
-
-export interface Pay {
-  payee: string;
-  amount: string;
-  invoice: string;
-  memo?: string;
-  mandateId?: string;
-}
-
-export interface MandateOverrides {
-  payees?: string[];
-  maxTotal?: string;
-  maxPerPayment?: string;
-  purpose?: string;
-  funding?: string;
 }
 
 interface Waiter {
@@ -89,73 +69,35 @@ function eventsOf(logs: string[]): VaultEvent[] {
   });
 }
 
-function checkerAbi(world: {
-  blob(url: string): string | null;
-  model(body: string): string | null;
-}) {
-  let exports: {
-    memory: WebAssembly.Memory;
-    alloc(len: number): number;
-    check(input: number, len: number, key: number): bigint;
-  };
-  const toPacked = (text: string | null): bigint => {
-    if (text === null) return 0xffff_ffff_ffff_ffffn;
-    const bytes = textEncoder.encode(text);
-    const ptr = exports.alloc(bytes.length);
-    new Uint8Array(exports.memory.buffer).set(bytes, ptr);
-    return (BigInt(ptr) << 32n) | BigInt(bytes.length);
-  };
-  const readText = (ptr: number, len: number) =>
-    textDecoder.decode(new Uint8Array(exports.memory.buffer, ptr, len).slice());
-  const instance = new WebAssembly.Instance(new WebAssembly.Module(load("checker.wasm")), {
-    host: {
-      host_get: (ptr: number, len: number) => toPacked(world.blob(readText(ptr, len))),
-      host_model: (ptr: number, len: number) => toPacked(world.model(readText(ptr, len))),
-    },
-  });
-  exports = instance.exports as unknown as typeof exports;
-  return (input: string, secretKey: Uint8Array): string | null => {
-    try {
-      const bytes = textEncoder.encode(input);
-      const inputPtr = exports.alloc(bytes.length);
-      new Uint8Array(exports.memory.buffer).set(bytes, inputPtr);
-      const keyPtr = exports.alloc(32);
-      new Uint8Array(exports.memory.buffer).set(secretKey, keyPtr);
-      const packed = BigInt.asUintN(64, exports.check(inputPtr, bytes.length, keyPtr));
-      if (packed === 0xffff_ffff_ffff_ffffn) return null;
-      return readText(Number(packed >> 32n), Number(packed & 0xffff_ffffn));
-    } catch (error) {
-      if (error instanceof WebAssembly.RuntimeError) return null;
-      throw error;
-    }
-  };
+/** Keeps odd characters visible in the report instead of hiding the attack. */
+export function printable(text: string): string {
+  const short = text.length > 40 ? `${text.slice(0, 37)}...` : text;
+  return short.replace(/[^\x20-\x7e]/g, (c) => `\\u{${(c.codePointAt(0) ?? 0).toString(16)}}`);
 }
 
 /**
  * One fresh deployment for one attack: the real vault WASM on the simulated runtime, the
  * real checker logic behind a stand-in model, and an agent holding only a function call key.
  */
-export class MockWorld {
+export class MockWorld implements World {
   readonly rt = new NearRuntime();
   readonly attempts: Attempt[] = [];
+  readonly vendor = VENDOR;
+  readonly attacker = ATTACKER;
+  readonly payroll = PAYROLL;
   /** Mandate the agent works under. */
   readonly mandateId: string;
-  modelMode: ModelMode = "honest";
-  /** A compromised checker: prints this instead of running. */
-  checkerOverride: string | null | undefined = undefined;
-  /** Holds checker runs until `releaseChecker`, so requests can overlap. */
   holdChecker = false;
+  readonly guard: Guard;
 
   private readonly blobs = new MemoryBlobStore();
   private readonly secretKey = randomBytes(32);
   private readonly terms: Record<string, MandateTerms> = {};
-  readonly guard: Guard;
-  private readonly runChecker: (input: string, key: Uint8Array) => string | null;
+  private readonly checker: CheckerLogic;
   private readonly held: { receiptId: number; input: string }[] = [];
   private readonly waiters: Waiter[] = [];
   private readonly listedPayees = new Set<string>();
   private readonly mandateIds: string[] = [];
-  private currentRequest = { payee: "", amount: 0n };
   private movementsFrom = 0;
 
   constructor() {
@@ -176,7 +118,7 @@ export class MockWorld {
         max_instructions: "100000000",
         max_memory_mb: 128,
         max_execution_seconds: "60",
-        check_timeout_ns: YIELD_TIMEOUT_NS.toString(),
+        check_timeout_ns: CHECK_TIMEOUT_NS.toString(),
       },
     });
     rt.removeFullAccessKeys(VAULT);
@@ -188,15 +130,7 @@ export class MockWorld {
     });
     rt.removeFullAccessKeys(AGENT);
 
-    this.runChecker = checkerAbi({
-      blob: (url) => this.blobs.blobs.get(url.split("/").pop() ?? "") ?? null,
-      model: (body) =>
-        standInModel(body, this.modelMode, {
-          payee: this.currentRequest.payee,
-          total: (this.currentRequest.amount / BigInt(near("1"))).toString(),
-        }),
-    });
-
+    this.checker = new CheckerLogic(this.blobs.blobs, this.secretKey);
     this.call(
       OWNER,
       VAULT,
@@ -204,73 +138,48 @@ export class MockWorld {
       { agent: AGENT, token: null, cap: DAILY_CAP },
       near("0.1"),
     );
-    this.mandateId = this.createMandate();
+    this.mandateId = this.createMandateNow();
     this.guard = new Guard({
       vault: { requestPayment: (args) => this.requestPayment(args) },
       blobs: this.blobs,
       checkerPublicKey: publicKeyOf(this.secretKey),
       mandates: this.terms,
     });
-    this.markClean();
+    this.movementsFrom = this.rt.movements.length;
   }
 
-  /** Creates and funds a mandate from the owner's wallet. */
-  createMandate(overrides: MandateOverrides = {}): string {
-    const purpose = overrides.purpose ?? PURPOSE;
-    const purposeSalt = randomBytes(16).toString("hex");
-    const result = this.call(
-      OWNER,
-      VAULT,
-      "create_mandate",
-      {
-        args: {
-          agent: AGENT,
-          payees: overrides.payees ?? [VENDOR],
-          token: null,
-          max_total: overrides.maxTotal ?? MAX_TOTAL,
-          max_per_payment: overrides.maxPerPayment ?? MAX_PER_PAYMENT,
-          purpose_hash: hashPurpose(purpose, purposeSalt),
-          expires_at: (this.rt.now + 30n * DAY_NS).toString(),
-          max_requests: 20,
-          max_checks_per_day: 20,
-          park_ttl: DAY_NS.toString(),
-          checker_budget: CHECKER_BUDGET,
-        },
-      },
-      CREATE_DEPOSIT,
-    );
-    const id = result.mandate_id as string;
-    this.terms[id] = { purpose, purposeSalt };
-    this.mandateIds.push(id);
-    for (const payee of overrides.payees ?? [VENDOR]) this.listedPayees.add(payee);
-
-    const surplus = this.rt.view<{ balance: string }>(VAULT, "get_mandate", {
-      mandate_id: id,
-    }).balance;
-    if (BigInt(surplus) > 0n) {
-      this.call(OWNER, VAULT, "withdraw", { mandate_id: id, amount: surplus }, "1");
-    }
-    this.call(OWNER, VAULT, "fund", { mandate_id: id }, overrides.funding ?? FUNDING);
-    return id;
+  get modelMode(): ModelMode {
+    return this.checker.modelMode;
   }
 
-  createPayrollMandate(): string {
-    return this.createMandate({ payees: [PAYROLL], purpose: PAYROLL_PURPOSE });
+  set modelMode(mode: ModelMode) {
+    this.checker.modelMode = mode;
   }
 
-  // ---------- What the compromised parties can do ----------
+  get checkerOverride(): ((requestId: string) => string | null) | undefined {
+    return this.checker.override;
+  }
 
-  /** The agent pays through the guard SDK with its only key. */
+  set checkerOverride(override: ((requestId: string) => string | null) | undefined) {
+    this.checker.override = override;
+  }
+
+  async createMandate(overrides: MandateOverrides = {}): Promise<string> {
+    return this.createMandateNow(overrides);
+  }
+
+  async createPayrollMandate(): Promise<string> {
+    return this.createMandateNow({ payees: [PAYROLL], purpose: PAYROLL_PURPOSE });
+  }
+
   async pay(pay: Pay): Promise<Attempt> {
-    const request: PayRequest = {
+    const result = await this.guard.pay({
       mandateId: pay.mandateId ?? this.mandateId,
       payee: pay.payee,
       amount: pay.amount,
       invoice: pay.invoice,
       ...(pay.memo === undefined ? {} : { memo: pay.memo }),
-    };
-    this.currentRequest = { payee: pay.payee, amount: toBigIntOrZero(pay.amount) };
-    const result = await this.guard.pay(request);
+    });
     return this.note(`request_payment to ${printable(pay.payee)}`, {
       layer: result.layer,
       decision: result.decision,
@@ -279,13 +188,11 @@ export class MockWorld {
     });
   }
 
-  /** Lets queued work reach the chain while earlier requests are still waiting. */
   async settle(): Promise<void> {
     await new Promise((resolve) => setImmediate(resolve));
   }
 
-  /** The agent signs any call its key allows it to attempt. */
-  agentCall(method: string, args: unknown, deposit = "0"): Attempt {
+  async agentCall(method: string, args: unknown, deposit = "0"): Promise<Attempt> {
     return this.tx(
       {
         signer: AGENT,
@@ -297,7 +204,7 @@ export class MockWorld {
     );
   }
 
-  agentTransfer(to: string, amount: string): Attempt {
+  async agentTransfer(to: string, amount: string): Promise<Attempt> {
     return this.tx(
       {
         signer: AGENT,
@@ -309,8 +216,7 @@ export class MockWorld {
     );
   }
 
-  /** The attacker signs from their own account. */
-  attackerCall(method: string, args: unknown, deposit = "0"): Attempt {
+  async attackerCall(method: string, args: unknown, deposit = "0"): Promise<Attempt> {
     return this.tx(
       {
         signer: ATTACKER,
@@ -321,7 +227,7 @@ export class MockWorld {
     );
   }
 
-  ownerCall(method: string, args: unknown, deposit = "1"): Attempt {
+  async ownerCall(method: string, args: unknown, deposit = "1"): Promise<Attempt> {
     return this.tx(
       {
         signer: OWNER,
@@ -332,15 +238,14 @@ export class MockWorld {
     );
   }
 
-  expireMandates(): void {
+  async expireMandates(): Promise<void> {
     this.rt.advance(31n * DAY_NS);
   }
 
-  /** Runs the checker on every held request and delivers the verdicts. */
   async releaseChecker(): Promise<void> {
     this.holdChecker = false;
     for (const { receiptId, input } of this.held.splice(0)) {
-      const output = this.checkerOutput(input);
+      const output = this.checker.output(input);
       this.rt.resolveHeld(receiptId, textEncoder.encode(output ?? "null"));
     }
     for (const waiter of this.waiters.splice(0)) {
@@ -349,20 +254,15 @@ export class MockWorld {
     await this.settle();
   }
 
-  /** Forgets everything so far when counting losses. For legitimate setup payments. */
-  markClean(): void {
+  async markClean(): Promise<void> {
     this.movementsFrom = this.rt.movements.length;
   }
 
-  // ---------- Accounting ----------
-
-  /** Paid out of the vault to anyone not on a mandate, net of what they paid in. */
-  fundsLost(): bigint {
+  async fundsLost(): Promise<bigint> {
     const moves = this.rt.movements.slice(this.movementsFrom);
-    const accounts = new Set(moves.map((move) => move.to));
-    let lost = 0n;
-    for (const account of accounts) {
-      if (account === VAULT || account === OWNER || account === OUTLAYER) continue;
+    let lost = this.attackerGain();
+    for (const account of new Set(moves.map((move) => move.to))) {
+      if ([VAULT, OWNER, OUTLAYER, ATTACKER].includes(account)) continue;
       if (this.listedPayees.has(account)) continue;
       const out = moves.filter((m) => m.from === VAULT && m.to === account);
       const back = moves.filter((m) => m.from === account && m.to === VAULT);
@@ -372,12 +272,11 @@ export class MockWorld {
     return lost;
   }
 
-  /** Paid to a payee the owner listed, since the last `markClean`. */
-  paidToListed(): bigint {
+  async paidToListed(): Promise<bigint> {
     return this.fromVault((to) => this.listedPayees.has(to));
   }
 
-  feesBurned(): bigint {
+  async feesBurned(): Promise<bigint> {
     return this.fromVault((to) => to === OUTLAYER);
   }
 
@@ -385,8 +284,7 @@ export class MockWorld {
     return this.rt.balance(ATTACKER) - BigInt(near("1"));
   }
 
-  /** The vault holds at least what its mandates say it holds. */
-  solvent(): boolean {
+  async solvent(): Promise<boolean> {
     const held = this.mandateIds.reduce((total, id) => {
       const mandate = this.rt.view<{
         balance: string;
@@ -403,6 +301,12 @@ export class MockWorld {
     return this.rt.balance(VAULT) >= held;
   }
 
+  lastAttempt(): Attempt | undefined {
+    return this.attempts.at(-1);
+  }
+
+  async finish(): Promise<void> {}
+
   invoiceUsed(invoice: string): boolean {
     return this.rt.view<boolean>(VAULT, "is_invoice_used", {
       owner: OWNER,
@@ -410,24 +314,56 @@ export class MockWorld {
     });
   }
 
-  // ---------- Internals ----------
+  private createMandateNow(overrides: MandateOverrides = {}): string {
+    const purpose = overrides.purpose ?? PURPOSE;
+    const purposeSalt = randomBytes(16).toString("hex");
+    const payees = overrides.payees ?? [VENDOR];
+    const result = this.call(
+      OWNER,
+      VAULT,
+      "create_mandate",
+      {
+        args: {
+          agent: AGENT,
+          payees,
+          token: null,
+          max_total: overrides.maxTotal ?? MAX_TOTAL,
+          max_per_payment: overrides.maxPerPayment ?? MAX_PER_PAYMENT,
+          purpose_hash: hashPurpose(purpose, purposeSalt),
+          expires_at: (this.rt.now + 30n * DAY_NS).toString(),
+          max_requests: MAX_REQUESTS,
+          max_checks_per_day: MAX_CHECKS_PER_DAY,
+          park_ttl: DAY_NS.toString(),
+          checker_budget: CHECKER_BUDGET,
+        },
+      },
+      CREATE_DEPOSIT,
+    );
+    const id = result.mandate_id as string;
+    this.terms[id] = { purpose, purposeSalt };
+    this.mandateIds.push(id);
+    for (const payee of payees) this.listedPayees.add(payee);
+
+    const { balance } = this.rt.view<{ balance: string }>(VAULT, "get_mandate", { mandate_id: id });
+    if (BigInt(balance) > 0n) {
+      this.call(OWNER, VAULT, "withdraw", { mandate_id: id, amount: balance }, "1");
+    }
+    this.call(OWNER, VAULT, "fund", { mandate_id: id }, overrides.funding ?? FUNDING);
+    return id;
+  }
 
   private fromVault(match: (to: string) => boolean): bigint {
-    return this.rt.movements
-      .slice(this.movementsFrom)
-      .filter((move) => move.from === VAULT && match(move.to))
-      .reduce((total, move) => total + move.amount, 0n);
+    return sum(
+      this.rt.movements
+        .slice(this.movementsFrom)
+        .filter((move) => move.from === VAULT && match(move.to)),
+    );
   }
 
   private note(tried: string, result: Omit<Attempt, "tried">): Attempt {
     const attempt = { tried, ...result };
     this.attempts.push(attempt);
     return attempt;
-  }
-
-  private checkerOutput(input: string): string | null {
-    if (this.checkerOverride !== undefined) return this.checkerOverride;
-    return this.runChecker(input, this.secretKey);
   }
 
   private outlayer(call: {
@@ -445,7 +381,7 @@ export class MockWorld {
       return "hold";
     }
     // OutLayer's `Json` format returns the guest's JSON as is, and null for a failed run.
-    const output = this.checkerOutput(args.input_data) ?? "null";
+    const output = this.checker.output(args.input_data) ?? "null";
     return { ok: true, value: textEncoder.encode(output) };
   }
 
@@ -558,18 +494,4 @@ function publicKeyOf(secretKey: Uint8Array): string {
     .export({ format: "der", type: "spki" })
     .subarray(-32)
     .toString("hex");
-}
-
-function toBigIntOrZero(amount: string): bigint {
-  try {
-    return BigInt(amount);
-  } catch {
-    return 0n;
-  }
-}
-
-/** Keeps odd characters visible in the report instead of hiding the attack. */
-function printable(text: string): string {
-  const short = text.length > 40 ? `${text.slice(0, 37)}...` : text;
-  return short.replace(/[^\x20-\x7e]/g, (c) => `\\u{${(c.codePointAt(0) ?? 0).toString(16)}}`);
 }

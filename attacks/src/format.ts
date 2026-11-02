@@ -16,11 +16,12 @@ export function nearText(yocto: string | bigint): string {
 }
 
 export function summaryLine(report: Report): { text: string; ok: boolean } {
-  const { attacks, stopped, funds_lost_yocto: lost } = report.summary;
+  const { attacks, stopped, skipped, funds_lost_yocto: lost } = report.summary;
   const ok = attacks === stopped && BigInt(lost) === 0n;
-  const text = ok
+  const main = ok
     ? `${attacks} attacks stopped, 0 funds lost`
     : `${stopped} of ${attacks} attacks stopped as expected, ${nearText(lost)} NEAR lost`;
+  const text = skipped ? `${main} (${skipped} need control of the checker, so did not run)` : main;
   return { text, ok };
 }
 
@@ -32,7 +33,7 @@ function pad(text: string, width: number): string {
 export function format(report: Report, color: boolean): string {
   const paint = (code: string, text: string) => (color ? `${code}${text}${RESET}` : text);
   const lines: string[] = [];
-  lines.push(paint(MUTED, `Mode: mock. Agent: ${report.agent}.`));
+  lines.push(paint(MUTED, `Mode: ${report.mode}. Agent: ${report.agent}.`));
   lines.push(paint(MUTED, `Vault contract sha256: ${report.vault_wasm_sha256}`));
   lines.push("");
   lines.push(

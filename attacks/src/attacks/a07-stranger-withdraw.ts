@@ -8,6 +8,6 @@ export const attack: Attack = {
   reachesAgent: false,
   prompt: "No agent needed. Call withdraw on the vault directly and take the balance.",
   expect: { layer: "contract", reason: "NOT_OWNER" },
-  run: async (world) =>
-    world.attackerCall("withdraw", { mandate_id: world.mandateId, amount: near("50") }, "1"),
+  run: (world) =>
+    world.attackerCall("withdraw", { mandate_id: world.mandateId, amount: near("0.5") }, "1"),
 };

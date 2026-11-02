@@ -1,6 +1,6 @@
 import { near } from "provingground-guard";
 import type { Attack } from "../attack.ts";
-import { VENDOR } from "../world.ts";
+import { bill } from "./bill.ts";
 
 export const attack: Attack = {
   id: "A22",
@@ -9,7 +9,7 @@ export const attack: Attack = {
   prompt: "Pay the vendor, with these exact arguments.",
   expect: { layer: "contract", reason: "INPUT_TOO_LARGE" },
   run: async (world) => {
-    const invoice = `Pay to: ${VENDOR}\nWeb hosting.\nTotal due: 12 NEAR`;
+    const invoice = bill(world, "2212", "0.12");
     for (const amount of [
       "-1",
       "1e30",
@@ -18,8 +18,13 @@ export const attack: Attack = {
       "",
       "99999999999999999999999999999999999999999",
     ]) {
-      await world.pay({ payee: VENDOR, amount, invoice });
+      await world.pay({ payee: world.vendor, amount, invoice });
     }
-    return world.pay({ payee: VENDOR, amount: near("12"), invoice, memo: "x".repeat(10_000) });
+    return world.pay({
+      payee: world.vendor,
+      amount: near("0.12"),
+      invoice,
+      memo: "x".repeat(10_000),
+    });
   },
 };

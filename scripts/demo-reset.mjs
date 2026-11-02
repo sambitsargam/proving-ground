@@ -10,7 +10,6 @@ import { hashPurpose, newPurposeSalt, near as toYocto } from "provingground-guar
 import { createMandate, DAY_NS } from "./lib/vault.mjs";
 
 const DEPLOYMENT = new URL("../deployments/testnet.json", import.meta.url);
-const VENDOR = "provingground-vendor.testnet";
 const PURPOSE = "Monthly web hosting from Acme Hosting, up to 1 NEAR a month.";
 
 const deployment = JSON.parse(readFileSync(DEPLOYMENT, "utf8"));
@@ -26,7 +25,7 @@ const mandateId = await createMandate(near, {
   vaultId: deployment.vault,
   ownerId: deployment.owner,
   agentId: deployment.agent,
-  payees: [VENDOR],
+  payees: [deployment.vendor],
   purposeHash: hashPurpose(PURPOSE, purposeSalt),
   dailyCap: toYocto("2"),
   maxTotal: toYocto("3"),
@@ -37,6 +36,11 @@ const mandateId = await createMandate(near, {
   deposit: "2 NEAR",
 });
 
-deployment.mandate = { id: mandateId, payee: VENDOR, purpose: PURPOSE, purpose_salt: purposeSalt };
+deployment.mandate = {
+  id: mandateId,
+  payee: deployment.vendor,
+  purpose: PURPOSE,
+  purpose_salt: purposeSalt,
+};
 writeFileSync(DEPLOYMENT, `${JSON.stringify(deployment, null, 2)}\n`);
 console.log(`Mandate ${mandateId} is ready for ${deployment.agent}`);

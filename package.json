@@ -21,7 +21,8 @@
     "@types/node": "^24.19.2",
     "typescript": "^7.0.2",
     "near-kit": "0.20.2",
-    "provingground-guard": "0.1.0"
+    "provingground-guard": "0.1.0",
+    "provingground": "0.1.0"
   },
   "dependencies": {}
 }

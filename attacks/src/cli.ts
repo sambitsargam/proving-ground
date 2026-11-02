@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import { writeFileSync } from "node:fs";
+import { parseArgs } from "node:util";
 import { formatEndpoint, testEndpoint } from "./endpoint.ts";
 import { format, summaryLine } from "./format.ts";
-import { runSuite } from "./suite.ts";
+import { type Report, runSuite } from "./suite.ts";
 
-const USAGE = `Usage: provingground test [target] [--report <path>]
+const USAGE = `Usage: provingground test [target] [--live <deployment.json>] [--only A01,A02] [--report <path>]
 
 With no target, runs 25 attacks against the real vault contract on a simulated NEAR
 runtime, with a fully compromised agent. Needs no keys and no network.
@@ -17,21 +18,29 @@ and answers         {"reply": "...", "payments": [{"payee": "...", "amount": "<y
 
 Each payment your agent tries is then run against the vault contract, to show which
 attacks your agent falls for and what a mandate would have done about them.
+
+With --live, runs them against a vault deployed on testnet, with real transactions and the
+real checker. Needs AGENT_PRIVATE_KEY, BLOB_BASE_URL and the owner's and attacker's keys in
+~/.near-credentials. Spends a little testnet NEAR.
 `;
 
+function usage(code: number): number {
+  process.stdout.write(USAGE);
+  return code;
+}
+
 async function main(argv: string[]): Promise<number> {
-  const [command, ...rest] = argv;
-  if (command !== "test") {
-    process.stdout.write(USAGE);
-    return command === undefined || command === "--help" ? 0 : 2;
+  let parsed: ReturnType<typeof parseCommand>;
+  try {
+    parsed = parseCommand(argv);
+  } catch {
+    return usage(2);
   }
-  const flag = rest.indexOf("--report");
-  const reportPath = flag >= 0 ? rest[flag + 1] : "report.json";
-  if (!reportPath) {
-    process.stdout.write(USAGE);
-    return 2;
-  }
-  const target = rest.find((arg, index) => !arg.startsWith("--") && index !== flag + 1);
+  const { command, target, values } = parsed;
+  if (values.help || command === undefined) return usage(0);
+  if (command !== "test") return usage(2);
+  const reportPath = values.report ?? "report.json";
+  const only = values.only?.split(",");
 
   if (target) {
     const report = await testEndpoint(target);
@@ -41,11 +50,36 @@ async function main(argv: string[]): Promise<number> {
     return report.summary.funds_lost_yocto === "0" ? 0 : 1;
   }
 
-  const report = await runSuite();
+  let report: Report;
+  if (values.live) {
+    // Loaded here so that mock mode never touches the chain client.
+    const { runLive } = await import("./live.ts");
+    report = await runLive(values.live, {
+      ...(only ? { only } : {}),
+      onResult: (r) => process.stderr.write(`${r.id} ${r.layer} ${r.decision} ${r.reason}\n`),
+    });
+  } else {
+    report = await runSuite(only ? { only } : {});
+  }
   writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);
   process.stdout.write(format(report, process.stdout.isTTY === true));
   process.stdout.write(`\nReport written to ${reportPath}\n`);
   return summaryLine(report).ok ? 0 : 1;
+}
+
+function parseCommand(argv: string[]) {
+  const { values, positionals } = parseArgs({
+    args: argv,
+    allowPositionals: true,
+    options: {
+      help: { type: "boolean" },
+      report: { type: "string" },
+      live: { type: "string" },
+      only: { type: "string" },
+    },
+  });
+  const [command, target] = positionals;
+  return { command, target, values };
 }
 
 main(process.argv.slice(2)).then(
@@ -53,7 +87,7 @@ main(process.argv.slice(2)).then(
     process.exitCode = code;
   },
   (error: unknown) => {
-    process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`);
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     process.exitCode = 1;
   },
 );

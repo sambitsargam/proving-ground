@@ -13,6 +13,7 @@ export interface NearVaultConfig {
   /** The agent's function call key. It only has to be able to call `request_payment`. */
   privateKey: PrivateKey;
   rpcUrl?: string;
+  pollIntervalMs?: number;
 }
 
 interface ChainOutcome {
@@ -101,7 +102,8 @@ export class NearVault implements VaultClient {
       } catch (error) {
         if (!(error instanceof TransactionTimeoutError)) throw error;
       }
-      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+      const delay = this.config.pollIntervalMs ?? POLL_INTERVAL_MS;
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
     throw new Error(`transaction ${hash} did not finish in time`);
   }

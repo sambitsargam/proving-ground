@@ -1,4 +1,4 @@
-.PHONY: contracts test-core test-contracts checker test-checker checker-eval attacks-wasm deps ts test-ts test-sandbox attack verify testnet-check testnet-deploy demo-reset lint
+.PHONY: contracts test-core test-contracts checker test-checker checker-eval attacks-wasm deps ts test-ts test-sandbox test-parity attack verify testnet-check testnet-deploy demo-reset lint
 
 CHECKER_WASM := target/wasm32-wasip2/release/provingground-checker.wasm
 CHECKER_TEST_DIR := target/checker-test
@@ -47,8 +47,12 @@ ts: deps
 test-ts: ts attacks-wasm
 	npm test
 
-# The guard SDK's chain client on a local node, using the sandbox from test-contracts.
-test-sandbox: ts contracts
+# A sample of the attacks on a real local node, using the sandbox from test-contracts.
+test-sandbox: ts attacks-wasm
+	node scripts/sandbox-check.mjs --quick
+
+# All 25 on a real local node, compared with mock mode. Takes several minutes.
+test-parity: ts attacks-wasm
 	node scripts/sandbox-check.mjs
 
 attack: ts attacks-wasm

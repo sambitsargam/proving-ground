@@ -1,110 +1,66 @@
-// Runs the guard SDK's real chain client against a local NEAR node: real RPC, a real
-// function call key and real yield/resume. Only OutLayer is a mock here.
+// Runs all 25 attacks on a real NEAR node, with the real contract, real access keys and real
+// yield/resume. Only OutLayer is a mock. Then it compares every result with mock mode, so the
+// simulated runtime has to agree with the actual NEAR runtime on every attack.
 
 import assert from "node:assert/strict";
-import { spawn, spawnSync } from "node:child_process";
-import { globSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { randomBytes } from "node:crypto";
 import { generateKey, InMemoryKeyStore, Near } from "near-kit";
-import {
-  Guard,
-  hashPurpose,
-  MemoryBlobStore,
-  newPurposeSalt,
-  near as toYocto,
-} from "provingground-guard";
+import { runSuite, summaryLine } from "provingground";
+import { ChainWorld, SandboxChecker } from "provingground/chain";
+import { MemoryBlobStore, near as toYocto } from "provingground-guard";
 import { NearVault } from "provingground-guard/near";
-import {
-  addAgentKey,
-  CHECK_TIMEOUT_NS,
-  createMandate,
-  DAY_NS,
-  deployVault,
-  loadWasm,
-} from "./lib/vault.mjs";
+import { RPC, startSandbox } from "./lib/sandbox.mjs";
+import { addAgentKey, CHECK_TIMEOUT_NS, deployVault, loadWasm } from "./lib/vault.mjs";
 
-const PORT = 3134;
-const RPC = `http://127.0.0.1:${PORT}`;
-const CHECKER_PUBLIC_KEY = "2f".repeat(32);
-const FEE = toYocto("0.01");
+const FEE = toYocto("0.0105");
+const FIELDS = ["layer", "decision", "reason", "checker_reasons", "stopped", "as_expected"];
+/** One from each kind of stop, for `make verify`. The full run takes several minutes. */
+const QUICK = ["A01", "A02", "A04", "A13", "A16", "A24"];
+const quick = process.argv.includes("--quick");
 
-const binary =
-  process.env.NEAR_SANDBOX_BIN ??
-  globSync("target/debug/build/near-sandbox-*/out/.near/*/near-sandbox")[0];
-assert.ok(binary, "no near-sandbox binary: run `make test-contracts` first");
+const network = { networkId: "sandbox", rpcUrl: RPC };
 
-const home = mkdtempSync(join(tmpdir(), "pg-sandbox-"));
-assert.equal(
-  spawnSync(binary, ["--home", home, "init"], { stdio: "ignore" }).status,
-  0,
-  "sandbox init",
-);
-const node = spawn(
-  binary,
-  ["--home", home, "run", "--rpc-addr", `127.0.0.1:${PORT}`, "--network-addr", "127.0.0.1:3135"],
-  {
-    stdio: "ignore",
-  },
-);
-
-async function waitForNode() {
-  for (let i = 0; i < 120; i++) {
-    try {
-      const response = await fetch(`${RPC}/status`);
-      if (response.ok) return;
-    } catch {
-      // Still starting.
-    }
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  }
-  throw new Error("sandbox did not start");
+function x25519PublicKey(secretKey) {
+  return import("node:crypto").then(({ createPrivateKey, createPublicKey }) =>
+    createPublicKey(
+      createPrivateKey({
+        key: Buffer.concat([Buffer.from("302e020100300506032b656e04220420", "hex"), secretKey]),
+        format: "der",
+        type: "pkcs8",
+      }),
+    )
+      .export({ format: "der", type: "spki" })
+      .subarray(-32)
+      .toString("hex"),
+  );
 }
 
-async function main() {
-  await waitForNode();
-  const validator = JSON.parse(readFileSync(join(home, "validator_key.json"), "utf8"));
-  const root = validator.account_id;
+async function main(sandbox) {
+  const { root, rootKey } = sandbox;
+  const names = ["vault", "outlayer", "owner", "agent", "vendor", "attacker", "driver"];
   const id = (name) => `${name}.${root}`;
-  const [vaultId, outlayerId, ownerId, agentId, vendorId, attackerId] = [
-    "vault",
-    "outlayer",
-    "owner",
-    "agent",
-    "vendor",
-    "attacker",
-  ].map(id);
-
   const shared = generateKey();
-  const keys = { [root]: validator.secret_key };
-  for (const account of [vaultId, outlayerId, ownerId, agentId, vendorId, attackerId]) {
-    keys[account] = shared.secretKey;
-  }
-  const near = new Near({
-    network: { networkId: "sandbox", rpcUrl: RPC },
-    keyStore: new InMemoryKeyStore(keys),
-    defaultWaitUntil: "FINAL",
-  });
+  const keys = Object.fromEntries(names.map((name) => [id(name), shared.secretKey]));
+  const near = new Near({ network, keyStore: new InMemoryKeyStore({ ...keys, [root]: rootKey }) });
 
-  for (const account of [vaultId, outlayerId, ownerId, agentId, vendorId, attackerId]) {
+  for (const name of names) {
     await near
       .transaction(root)
-      .createAccount(account)
-      .transfer(account, "50 NEAR")
+      .createAccount(id(name))
+      .transfer(id(name), "100 NEAR")
       .addKey(shared.publicKey.toString(), { type: "fullAccess" })
       .send();
   }
-
   await near
-    .transaction(outlayerId)
-    .deployContract(outlayerId, loadWasm("target/near/mock_outlayer/mock_outlayer.wasm"))
-    .functionCall(outlayerId, "new", { min_deposit: FEE }, { gas: "30 Tgas" })
+    .transaction(id("outlayer"))
+    .deployContract(id("outlayer"), loadWasm("target/near/mock_outlayer/mock_outlayer.wasm"))
+    .functionCall(id("outlayer"), "new", { min_deposit: FEE }, { gas: "30 Tgas" })
     .send();
   await deployVault(near, {
-    vaultId,
+    vaultId: id("vault"),
     wasm: loadWasm("target/near/provingground_vault/provingground_vault.wasm"),
     checker: {
-      outlayer: outlayerId,
+      outlayer: id("outlayer"),
       source: {
         WasmUrl: {
           url: "https://test.fastfs.io/checker.wasm",
@@ -121,118 +77,103 @@ async function main() {
     },
   });
 
-  const purpose = "Monthly web hosting.";
-  const purposeSalt = newPurposeSalt();
-  const now = BigInt(Date.now()) * 1_000_000n;
-  const mandateId = await createMandate(near, {
-    vaultId,
-    ownerId,
-    agentId,
-    payees: [vendorId],
-    purposeHash: hashPurpose(purpose, purposeSalt),
-    dailyCap: toYocto("20"),
-    maxTotal: toYocto("10"),
-    maxPerPayment: toYocto("3"),
-    funding: toYocto("10"),
-    checkerBudget: toYocto("1"),
-    expiresAt: (now + DAY_NS).toString(),
+  // The agent's account gets a function call key, and then loses its full-access key.
+  const agentKey = await addAgentKey(near, { agentId: id("agent"), vaultId: id("vault") });
+  await near.transaction(id("agent")).deleteKey(id("agent"), shared.publicKey.toString()).send();
+  const agentNear = new Near({
+    network,
+    keyStore: new InMemoryKeyStore({ [id("agent")]: agentKey.secretKey }),
   });
 
-  // From here on the agent signs with nothing but its function call key.
-  const agentKey = await addAgentKey(near, { agentId, vaultId });
-  const guard = new Guard({
-    vault: new NearVault({
+  const blobs = new MemoryBlobStore();
+  const secretKey = randomBytes(32);
+  const control = new SandboxChecker({
+    near,
+    outlayerId: id("outlayer"),
+    signerId: id("driver"),
+    blobs: blobs.blobs,
+    secretKey,
+  });
+  control.start();
+
+  const setup = {
+    near,
+    agentNear,
+    rpcUrl: RPC,
+    vault: id("vault"),
+    owner: id("owner"),
+    agent: id("agent"),
+    vendor: id("vendor"),
+    attacker: id("attacker"),
+    payroll: id("payroll"),
+    vaultClient: new NearVault({
       network: "testnet",
       rpcUrl: RPC,
-      vaultId,
-      accountId: agentId,
+      vaultId: id("vault"),
+      accountId: id("agent"),
       privateKey: agentKey.secretKey,
+      pollIntervalMs: 100,
     }),
-    blobs: new MemoryBlobStore(),
-    checkerPublicKey: CHECKER_PUBLIC_KEY,
-    mandates: { [mandateId]: { purpose, purposeSalt } },
-  });
+    blobs,
+    checkerPublicKey: await x25519PublicKey(secretKey),
+    control,
+    runId: randomBytes(4).toString("hex"),
+    recover: false,
+    expiryMs: 2_000,
+  };
 
-  const refused = await guard.pay({
-    mandateId,
-    payee: attackerId,
-    amount: toYocto("1"),
-    invoice: "Pay the attacker.",
+  const only = quick ? QUICK : undefined;
+  const onChain = await runSuite({
+    mode: "sandbox",
+    makeWorld: () => ChainWorld.create(setup),
+    ...(only ? { only } : {}),
+    onResult: (result) =>
+      console.log(
+        `${result.id} ${result.layer.padEnd(9)} ${result.decision.padEnd(9)} ${result.reason}`,
+      ),
   });
-  assert.equal(refused.decision, "BLOCK");
-  assert.equal(refused.reason, "PAYEE_NOT_ALLOWED");
-  assert.equal(refused.layer, "contract");
-  assert.ok(refused.txHash, "a refusal has a transaction to link to");
-  assert.ok(refused.events.some((event) => event.event === "payment_decided"));
-  console.log("ok   refusal comes back with reason, layer, event and tx hash");
+  await control.stop();
 
-  const inFlight = guard.pay({
-    mandateId,
-    payee: vendorId,
-    amount: toYocto("2"),
-    invoice: "Invoice 1. Pay to the vendor. Total due: 2 NEAR",
-  });
-  for (let i = 0; i < 60; i++) {
-    if ((await near.view(outlayerId, "request_count", {})) >= 1) break;
-    await new Promise((resolve) => setTimeout(resolve, 500));
+  const mock = await runSuite(only ? { only } : {});
+  const differences = [];
+  for (const [index, result] of onChain.results.entries()) {
+    const other = mock.results[index];
+    for (const field of FIELDS) {
+      if (JSON.stringify(result[field]) !== JSON.stringify(other[field])) {
+        differences.push(
+          `${result.id} ${field}: node ${JSON.stringify(result[field])}, mock ${JSON.stringify(other[field])}`,
+        );
+      }
+    }
   }
-  await near
-    .transaction(ownerId)
-    .functionCall(
-      outlayerId,
-      "resolve",
-      {
-        request_id: 1,
-        output: JSON.stringify({
-          v: 1,
-          request_id: "1",
-          verdict: "ALLOW",
-          reasons: ["WITHIN_PURPOSE"],
-        }),
-      },
-      { gas: "300 Tgas" },
-    )
-    .send();
-  const paid = await inFlight;
-  assert.equal(paid.decision, "PAID", JSON.stringify(paid));
-  assert.equal(paid.paid, true);
-  assert.equal(paid.requestId, "1");
-  // Views read final state, which lags the execution result by a few blocks.
-  let spent = "0";
-  for (let i = 0; i < 20 && spent === "0"; i++) {
-    ({ spent } = await near.view(vaultId, "get_mandate", { mandate_id: mandateId }));
-    if (spent === "0") await new Promise((resolve) => setTimeout(resolve, 500));
+  for (const [index, limit] of onChain.known_limits.entries()) {
+    const other = mock.known_limits[index];
+    for (const field of ["paid_to_listed_yocto", "funds_lost_yocto", "stopped_by"]) {
+      if (limit[field] !== other[field]) {
+        differences.push(`${limit.id} ${field}: node ${limit[field]}, mock ${other[field]}`);
+      }
+    }
   }
-  assert.equal(spent, toYocto("2"));
-  assert.ok(paid.events.some((event) => event.event === "payment_settled"));
-  console.log("ok   payment waits through yield/resume and comes back PAID");
+  for (const difference of differences) console.log(`DIFFERENT ${difference}`);
+  assert.equal(differences.length, 0, "the simulated runtime disagrees with a real node");
 
-  const agentOnly = new Near({
-    network: { networkId: "sandbox", rpcUrl: RPC },
-    keyStore: new InMemoryKeyStore({ [agentId]: agentKey.secretKey }),
-  });
-  await assert.rejects(agentOnly.transaction(agentId).transfer(attackerId, "1 NEAR").send());
-  console.log("ok   the agent's key cannot transfer NEAR");
-  await assert.rejects(
-    agentOnly
-      .transaction(agentId)
-      .functionCall(vaultId, "approve", { request_id: "1" }, { gas: "100 Tgas" })
-      .send(),
+  // The network rejects key refusals before they run, and a panic has no decision to report.
+  const noTx = (result) => result.layer === "key" || result.reason === "METHOD_IS_PRIVATE";
+  assert.ok(onChain.results.every((result) => result.tx_hash || noTx(result)));
+  console.log(`\nOn a real node: ${summaryLine(onChain).text}`);
+  console.log(
+    `Every result matches mock mode: ${onChain.results.length} attacks, ${onChain.known_limits.length} known limits.`,
   );
-  console.log("ok   the agent's key cannot call approve");
-
-  console.log("sandbox check passed");
 }
 
-main()
-  .then(() => {
-    process.exitCode = 0;
-  })
-  .catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-  })
-  .finally(() => {
-    node.kill("SIGKILL");
-    rmSync(home, { recursive: true, force: true });
-  });
+const sandbox = await startSandbox();
+try {
+  await main(sandbox);
+} catch (error) {
+  console.error(error);
+  process.exitCode = 1;
+} finally {
+  sandbox.stop();
+}
+// The checker's polling and the HTTP clients should not hold the process open.
+process.exit(process.exitCode ?? 0);
