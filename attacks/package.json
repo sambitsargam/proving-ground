@@ -1,0 +1,32 @@
+{
+  "name": "provingground",
+  "version": "0.1.0",
+  "description": "Attack an agent's payments: 25 scripted attacks against a contract-enforced mandate on NEAR",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "provingground": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "wasm"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test src/*.test.ts",
+    "attack": "node src/cli.ts test --report report.json"
+  },
+  "dependencies": {
+    "provingground-guard": "0.1.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./world": {
+      "types": "./dist/world.d.ts",
+      "default": "./dist/world.js"
+    }
+  }
+}

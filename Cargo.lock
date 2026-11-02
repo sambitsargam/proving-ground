@@ -2568,6 +2568,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "provingground-checker-abi"
+version = "0.1.0"
+dependencies = [
+ "provingground-checker",
+]
+
+[[package]]
 name = "provingground-core"
 version = "0.1.0"
 dependencies = [

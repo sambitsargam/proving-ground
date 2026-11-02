@@ -1,0 +1,12 @@
+[package]
+name = "provingground-checker-abi"
+description = "The checker's logic behind a plain WASM interface, for the attack suite's mock mode"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+provingground-checker = { path = "../checker" }
