@@ -6,6 +6,7 @@ members = [
     "contracts/mock-outlayer",
     "contracts/mock-token",
     "contracts/vault-tests",
+    "services/checker",
 ]
 
 [workspace.package]

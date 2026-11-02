@@ -1,0 +1,26 @@
+[package]
+name = "provingground-checker"
+description = "Veto-only payment checker that runs in OutLayer and calls a TEE-hosted model"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+# Lets tests point the checker at a local model server. Release builds leave
+# this off, so the model endpoint is part of the published WASM hash.
+local-model = []
+
+[dependencies]
+chacha20poly1305 = { version = "0.10", default-features = false, features = ["alloc"] }
+hkdf = "0.12"
+provingground-core = { path = "../../contracts/core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+x25519-dalek = { version = "2", features = ["static_secrets"] }
+
+[target.'cfg(target_os = "wasi")'.dependencies]
+wasi-http-client = "0.2"
+
+[dev-dependencies]
+proptest = "1"
