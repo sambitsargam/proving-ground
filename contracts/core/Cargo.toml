@@ -1,0 +1,13 @@
+[package]
+name = "provingground-core"
+description = "Payment mandate rules shared by the vault contract and the mock attack harness"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+borsh = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+proptest = "1"
