@@ -1,4 +1,4 @@
-.PHONY: contracts test-core test-contracts checker test-checker checker-eval attacks-wasm deps ts test-ts attack verify lint
+.PHONY: contracts test-core test-contracts checker test-checker checker-eval attacks-wasm deps ts test-ts test-sandbox attack verify testnet-check testnet-deploy demo-reset lint
 
 CHECKER_WASM := target/wasm32-wasip2/release/provingground-checker.wasm
 CHECKER_TEST_DIR := target/checker-test
@@ -47,11 +47,25 @@ ts: deps
 test-ts: ts attacks-wasm
 	npm test
 
+# The guard SDK's chain client on a local node, using the sandbox from test-contracts.
+test-sandbox: ts contracts
+	node scripts/sandbox-check.mjs
+
 attack: ts attacks-wasm
 	node attacks/dist/cli.js test --report attacks/report.json
 
+testnet-check: ts
+	node scripts/testnet-check.mjs
+
+# Needs CHECKER_WASM_URL. See docs/DEPLOY.md.
+testnet-deploy: ts contracts checker
+	node scripts/testnet-deploy.mjs
+
+demo-reset: ts
+	node scripts/demo-reset.mjs
+
 # Everything, with no keys. The last line it prints is the suite's summary.
-verify: lint test-core test-contracts test-checker test-ts attack
+verify: lint test-core test-contracts test-sandbox test-checker test-ts attack
 
 lint: deps
 	npx biome check .
