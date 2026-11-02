@@ -576,7 +576,9 @@ impl Vault {
                 PromiseOrValue::Value(decided("PARK", reason, Some(mandate.id), Some(request_id)))
             }
             Next::Block(reason) => {
-                emit_decision(&request, &mandate, "checker", "BLOCK", reason, reasons);
+                // A mandate that ended mid-flight is the contract's call, not the checker's.
+                let layer = if reason == Reason::CheckerBlock { "checker" } else { "contract" };
+                emit_decision(&request, &mandate, layer, "BLOCK", reason, reasons);
                 self.finish(&mut request, mandate, PaymentStatus::Blocked, reason, false);
                 PromiseOrValue::Value(decided(
                     "BLOCK",
