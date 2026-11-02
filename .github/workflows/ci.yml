@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry
+            target
+          key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+      - name: Install contract tools
+        run: |
+          rustup show active-toolchain || rustup toolchain install
+          command -v cargo-near || cargo install cargo-near --version 0.22.0 --locked
+      - name: Install Wasmtime 27
+        run: |
+          command -v wasmtime || {
+            rustup toolchain install 1.82.0 --profile minimal
+            cargo +1.82.0 install wasmtime-cli --version 27.0.0 --locked
+          }
+      - name: Build, test and attack
+        run: make verify
