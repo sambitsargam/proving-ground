@@ -1,0 +1,16 @@
+prompt.md
+NOTES.md
+
+.claude/
+.agents/
+CLAUDE.md
+
+.env
+.env.*
+!.env.example
+
+node_modules/
+dist/
+target/
+.next/
+.DS_Store
