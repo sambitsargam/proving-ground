@@ -80,18 +80,10 @@ impl Mandate {
         if reserved > self.balance {
             return Err(Reason::InsufficientBalance);
         }
-        let budget = self
-            .checker_budget
-            .checked_sub(check_cost)
-            .ok_or(Reason::CheckerBudgetExhausted)?;
-        let storage = self
-            .storage_balance
-            .checked_sub(storage_cost)
-            .ok_or(Reason::RequestLimit)?;
-        let requests = self
-            .requests_stored
-            .checked_add(1)
-            .ok_or(Reason::Overflow)?;
+        let budget =
+            self.checker_budget.checked_sub(check_cost).ok_or(Reason::CheckerBudgetExhausted)?;
+        let storage = self.storage_balance.checked_sub(storage_cost).ok_or(Reason::RequestLimit)?;
+        let requests = self.requests_stored.checked_add(1).ok_or(Reason::Overflow)?;
         let checks = self.checks_on(day).checked_add(1).ok_or(Reason::Overflow)?;
 
         self.reserved = reserved;

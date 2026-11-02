@@ -31,10 +31,7 @@ impl Ledger for Book {
 }
 
 fn book() -> Book {
-    Book {
-        cap: Some(500),
-        ..Book::default()
-    }
+    Book { cap: Some(500), ..Book::default() }
 }
 
 fn mandate() -> Mandate {
@@ -110,19 +107,13 @@ fn valid_request_is_accepted() {
 
 #[test]
 fn gas_too_low() {
-    let i = PaymentInput {
-        gas_sufficient: false,
-        ..input()
-    };
+    let i = PaymentInput { gas_sufficient: false, ..input() };
     assert_eq!(refused(i, &mandate(), &book()), Reason::GasTooLow);
 }
 
 #[test]
 fn deposit_not_allowed() {
-    let i = PaymentInput {
-        attached_deposit: 1,
-        ..input()
-    };
+    let i = PaymentInput { attached_deposit: 1, ..input() };
     assert_eq!(refused(i, &mandate(), &book()), Reason::DepositNotAllowed);
 }
 
@@ -130,61 +121,14 @@ fn deposit_not_allowed() {
 fn input_too_large() {
     let long = "x".repeat(1_000);
     let (m, b) = (mandate(), book());
+    assert_eq!(refused(PaymentInput { payee: &long, ..input() }, &m, &b), Reason::InputTooLarge);
+    assert_eq!(refused(PaymentInput { amount: &long, ..input() }, &m, &b), Reason::InputTooLarge);
     assert_eq!(
-        refused(
-            PaymentInput {
-                payee: &long,
-                ..input()
-            },
-            &m,
-            &b
-        ),
+        refused(PaymentInput { invoice_hash: &long, ..input() }, &m, &b),
         Reason::InputTooLarge
     );
-    assert_eq!(
-        refused(
-            PaymentInput {
-                amount: &long,
-                ..input()
-            },
-            &m,
-            &b
-        ),
-        Reason::InputTooLarge
-    );
-    assert_eq!(
-        refused(
-            PaymentInput {
-                invoice_hash: &long,
-                ..input()
-            },
-            &m,
-            &b
-        ),
-        Reason::InputTooLarge
-    );
-    assert_eq!(
-        refused(
-            PaymentInput {
-                blob_ref: &long,
-                ..input()
-            },
-            &m,
-            &b
-        ),
-        Reason::InputTooLarge
-    );
-    assert_eq!(
-        refused(
-            PaymentInput {
-                memo: &long,
-                ..input()
-            },
-            &m,
-            &b
-        ),
-        Reason::InputTooLarge
-    );
+    assert_eq!(refused(PaymentInput { blob_ref: &long, ..input() }, &m, &b), Reason::InputTooLarge);
+    assert_eq!(refused(PaymentInput { memo: &long, ..input() }, &m, &b), Reason::InputTooLarge);
 }
 
 #[test]
@@ -218,14 +162,7 @@ fn invoice_hash_invalid() {
     let not_hex = "z".repeat(64);
     for invoice_hash in ["", "ab", upper.as_str(), not_hex.as_str(), &HASH[..63]] {
         assert_eq!(
-            refused(
-                PaymentInput {
-                    invoice_hash,
-                    ..input()
-                },
-                &m,
-                &b
-            ),
+            refused(PaymentInput { invoice_hash, ..input() }, &m, &b),
             Reason::InvoiceHashInvalid,
             "{invoice_hash:?}"
         );
@@ -240,10 +177,7 @@ fn mandate_not_found() {
 
 #[test]
 fn not_agent() {
-    let i = PaymentInput {
-        caller: "attacker.testnet",
-        ..input()
-    };
+    let i = PaymentInput { caller: "attacker.testnet", ..input() };
     assert_eq!(refused(i, &mandate(), &book()), Reason::NotAgent);
 }
 
@@ -262,13 +196,7 @@ fn revoked_closed_and_expired() {
 #[test]
 fn lookalike_payees_are_invalid() {
     let (m, b) = (mandate(), book());
-    for payee in [
-        "аcme.testnet",
-        "acme.testnеt",
-        "ACME.testnet",
-        "acme\u{200b}.testnet",
-        "a",
-    ] {
+    for payee in ["аcme.testnet", "acme.testnеt", "ACME.testnet", "acme\u{200b}.testnet", "a"] {
         assert_eq!(
             refused(PaymentInput { payee, ..input() }, &m, &b),
             Reason::PayeeInvalid,
@@ -299,26 +227,8 @@ fn near_miss_payees_are_not_allowed() {
 #[test]
 fn limits_are_exact() {
     let (m, b) = (mandate(), book());
-    assert!(check(
-        PaymentInput {
-            amount: "100",
-            ..input()
-        },
-        &m,
-        &b
-    )
-    .is_ok());
-    assert_eq!(
-        refused(
-            PaymentInput {
-                amount: "101",
-                ..input()
-            },
-            &m,
-            &b
-        ),
-        Reason::OverPerPayment
-    );
+    assert!(check(PaymentInput { amount: "100", ..input() }, &m, &b).is_ok());
+    assert_eq!(refused(PaymentInput { amount: "101", ..input() }, &m, &b), Reason::OverPerPayment);
 }
 
 #[test]
@@ -327,26 +237,8 @@ fn over_total_counts_spent_and_reserved() {
     m.spent = 850;
     m.balance = 10_000;
     m.reserved = 100;
-    assert!(check(
-        PaymentInput {
-            amount: "50",
-            ..input()
-        },
-        &m,
-        &book()
-    )
-    .is_ok());
-    assert_eq!(
-        refused(
-            PaymentInput {
-                amount: "51",
-                ..input()
-            },
-            &m,
-            &book()
-        ),
-        Reason::OverTotal
-    );
+    assert!(check(PaymentInput { amount: "50", ..input() }, &m, &book()).is_ok());
+    assert_eq!(refused(PaymentInput { amount: "51", ..input() }, &m, &book()), Reason::OverTotal);
 }
 
 #[test]
@@ -354,24 +246,9 @@ fn insufficient_balance_counts_reserved() {
     let mut m = mandate();
     m.balance = 150;
     m.reserved = 100;
-    assert!(check(
-        PaymentInput {
-            amount: "50",
-            ..input()
-        },
-        &m,
-        &book()
-    )
-    .is_ok());
+    assert!(check(PaymentInput { amount: "50", ..input() }, &m, &book()).is_ok());
     assert_eq!(
-        refused(
-            PaymentInput {
-                amount: "51",
-                ..input()
-            },
-            &m,
-            &book()
-        ),
+        refused(PaymentInput { amount: "51", ..input() }, &m, &book()),
         Reason::InsufficientBalance
     );
 }
@@ -384,26 +261,8 @@ fn daily_cap() {
 
     let mut b = book();
     b.used.insert(day_of(NOW), 450);
-    assert!(check(
-        PaymentInput {
-            amount: "50",
-            ..input()
-        },
-        &m,
-        &b
-    )
-    .is_ok());
-    assert_eq!(
-        refused(
-            PaymentInput {
-                amount: "51",
-                ..input()
-            },
-            &m,
-            &b
-        ),
-        Reason::OverDailyCap
-    );
+    assert!(check(PaymentInput { amount: "50", ..input() }, &m, &b).is_ok());
+    assert_eq!(refused(PaymentInput { amount: "51", ..input() }, &m, &b), Reason::OverDailyCap);
 
     let mut yesterday = book();
     yesterday.used.insert(day_of(NOW) - 1, 500);
@@ -443,32 +302,18 @@ fn check_limit_resets_each_day() {
 fn checker_budget_exhausted() {
     let mut m = mandate();
     m.checker_budget = CHECK_COST - 1;
-    assert_eq!(
-        refused(input(), &m, &book()),
-        Reason::CheckerBudgetExhausted
-    );
+    assert_eq!(refused(input(), &m, &book()), Reason::CheckerBudgetExhausted);
 }
 
 #[test]
 fn rules_run_in_documented_order() {
     let mut m = mandate();
     m.status = MandateStatus::Revoked;
-    let bad = PaymentInput {
-        caller: "attacker.testnet",
-        payee: "attacker.testnet",
-        ..input()
-    };
+    let bad = PaymentInput { caller: "attacker.testnet", payee: "attacker.testnet", ..input() };
     assert_eq!(refused(bad, &m, &book()), Reason::NotAgent);
-    let bad = PaymentInput {
-        payee: "attacker.testnet",
-        ..input()
-    };
+    let bad = PaymentInput { payee: "attacker.testnet", ..input() };
     assert_eq!(refused(bad, &m, &book()), Reason::MandateRevoked);
-    let bad = PaymentInput {
-        payee: "attacker.testnet",
-        amount: "101",
-        ..input()
-    };
+    let bad = PaymentInput { payee: "attacker.testnet", amount: "101", ..input() };
     assert_eq!(refused(bad, &mandate(), &book()), Reason::PayeeNotAllowed);
 }
 
@@ -479,8 +324,7 @@ fn second_request_cannot_spend_a_reserved_budget() {
     m.balance = 150;
     let b = book();
     let first = check(input(), &m, &b).unwrap();
-    m.reserve(first.amount, day_of(NOW), CHECK_COST, STORAGE_COST)
-        .unwrap();
+    m.reserve(first.amount, day_of(NOW), CHECK_COST, STORAGE_COST).unwrap();
     assert_eq!(refused(input(), &m, &b), Reason::OverTotal);
 }
 
@@ -492,10 +336,7 @@ fn reserve_refuses_what_rules_would_refuse() {
     m.max_total = 5000;
     assert_eq!(m.reserve(1001, 1, 0, 0), Err(Reason::InsufficientBalance));
     m.max_total = before.max_total;
-    assert_eq!(
-        m.reserve(1, 1, 1001, 0),
-        Err(Reason::CheckerBudgetExhausted)
-    );
+    assert_eq!(m.reserve(1, 1, 1001, 0), Err(Reason::CheckerBudgetExhausted));
     assert_eq!(m.reserve(1, 1, 0, 1001), Err(Reason::RequestLimit));
     assert_eq!(m, before);
 }
@@ -522,109 +363,28 @@ fn new_mandate_validation() {
     let result = |new: NewMandate| validate_new_mandate(1, &new, NOW).map(|_| ()).unwrap_err();
 
     assert!(validate_new_mandate(1, &base, NOW).is_ok());
+    assert_eq!(result(NewMandate { agent: "BAD", ..base.clone() }), Reason::InvalidAgent);
+    assert_eq!(result(NewMandate { payees: &empty, ..base.clone() }), Reason::InvalidPayees);
+    assert_eq!(result(NewMandate { payees: &bad_payee, ..base.clone() }), Reason::InvalidPayees);
+    assert_eq!(result(NewMandate { payees: &too_many, ..base.clone() }), Reason::InvalidPayees);
+    assert_eq!(result(NewMandate { token: Some("BAD"), ..base.clone() }), Reason::InvalidToken);
+    assert_eq!(result(NewMandate { max_total: "0", ..base.clone() }), Reason::InvalidLimits);
+    assert_eq!(result(NewMandate { max_per_payment: "x", ..base.clone() }), Reason::InvalidLimits);
+    assert_eq!(result(NewMandate { max_per_payment: "11", ..base.clone() }), Reason::InvalidLimits);
     assert_eq!(
-        result(NewMandate {
-            agent: "BAD",
-            ..base.clone()
-        }),
-        Reason::InvalidAgent
-    );
-    assert_eq!(
-        result(NewMandate {
-            payees: &empty,
-            ..base.clone()
-        }),
-        Reason::InvalidPayees
-    );
-    assert_eq!(
-        result(NewMandate {
-            payees: &bad_payee,
-            ..base.clone()
-        }),
-        Reason::InvalidPayees
-    );
-    assert_eq!(
-        result(NewMandate {
-            payees: &too_many,
-            ..base.clone()
-        }),
-        Reason::InvalidPayees
-    );
-    assert_eq!(
-        result(NewMandate {
-            token: Some("BAD"),
-            ..base.clone()
-        }),
-        Reason::InvalidToken
-    );
-    assert_eq!(
-        result(NewMandate {
-            max_total: "0",
-            ..base.clone()
-        }),
-        Reason::InvalidLimits
-    );
-    assert_eq!(
-        result(NewMandate {
-            max_per_payment: "x",
-            ..base.clone()
-        }),
-        Reason::InvalidLimits
-    );
-    assert_eq!(
-        result(NewMandate {
-            max_per_payment: "11",
-            ..base.clone()
-        }),
-        Reason::InvalidLimits
-    );
-    assert_eq!(
-        result(NewMandate {
-            purpose_hash: "short",
-            ..base.clone()
-        }),
+        result(NewMandate { purpose_hash: "short", ..base.clone() }),
         Reason::InvalidPurposeHash
     );
+    assert_eq!(result(NewMandate { expires_at: NOW, ..base.clone() }), Reason::InvalidExpiry);
+    assert_eq!(result(NewMandate { max_requests: 0, ..base.clone() }), Reason::InvalidQuotas);
     assert_eq!(
-        result(NewMandate {
-            expires_at: NOW,
-            ..base.clone()
-        }),
-        Reason::InvalidExpiry
-    );
-    assert_eq!(
-        result(NewMandate {
-            max_requests: 0,
-            ..base.clone()
-        }),
+        result(NewMandate { max_requests: MAX_REQUESTS + 1, ..base.clone() }),
         Reason::InvalidQuotas
     );
+    assert_eq!(result(NewMandate { max_checks_per_day: 0, ..base.clone() }), Reason::InvalidQuotas);
+    assert_eq!(result(NewMandate { park_ttl: 0, ..base.clone() }), Reason::InvalidQuotas);
     assert_eq!(
-        result(NewMandate {
-            max_requests: MAX_REQUESTS + 1,
-            ..base.clone()
-        }),
-        Reason::InvalidQuotas
-    );
-    assert_eq!(
-        result(NewMandate {
-            max_checks_per_day: 0,
-            ..base.clone()
-        }),
-        Reason::InvalidQuotas
-    );
-    assert_eq!(
-        result(NewMandate {
-            park_ttl: 0,
-            ..base.clone()
-        }),
-        Reason::InvalidQuotas
-    );
-    assert_eq!(
-        result(NewMandate {
-            park_ttl: MAX_PARK_TTL_NS + 1,
-            ..base.clone()
-        }),
+        result(NewMandate { park_ttl: MAX_PARK_TTL_NS + 1, ..base.clone() }),
         Reason::InvalidQuotas
     );
 }
@@ -633,26 +393,11 @@ fn new_mandate_validation() {
 fn verdicts_map_to_next_steps() {
     let (r, m) = (request(PaymentStatus::Checking), mandate());
     let next = |outcome| after_verdict(&r, &m, NOW, &outcome).unwrap();
-    assert_eq!(
-        next(CheckerOutcome::Allow(vec![])),
-        Next::Pay(Reason::CheckerAllow)
-    );
-    assert_eq!(
-        next(CheckerOutcome::Warn(vec![])),
-        Next::Park(Reason::CheckerWarn)
-    );
-    assert_eq!(
-        next(CheckerOutcome::Block(vec![])),
-        Next::Block(Reason::CheckerBlock)
-    );
-    assert_eq!(
-        next(CheckerOutcome::Unavailable),
-        Next::Park(Reason::CheckerUnavailable)
-    );
-    assert_eq!(
-        next(CheckerOutcome::BadOutput),
-        Next::Park(Reason::CheckerBadOutput)
-    );
+    assert_eq!(next(CheckerOutcome::Allow(vec![])), Next::Pay(Reason::CheckerAllow));
+    assert_eq!(next(CheckerOutcome::Warn(vec![])), Next::Park(Reason::CheckerWarn));
+    assert_eq!(next(CheckerOutcome::Block(vec![])), Next::Block(Reason::CheckerBlock));
+    assert_eq!(next(CheckerOutcome::Unavailable), Next::Park(Reason::CheckerUnavailable));
+    assert_eq!(next(CheckerOutcome::BadOutput), Next::Park(Reason::CheckerBadOutput));
 }
 
 #[test]
@@ -661,15 +406,9 @@ fn allow_cannot_pay_a_revoked_or_expired_mandate() {
     let allow = CheckerOutcome::Allow(vec![]);
     let mut m = mandate();
     m.status = MandateStatus::Revoked;
-    assert_eq!(
-        after_verdict(&r, &m, NOW, &allow),
-        Ok(Next::Block(Reason::MandateRevoked))
-    );
+    assert_eq!(after_verdict(&r, &m, NOW, &allow), Ok(Next::Block(Reason::MandateRevoked)));
     m.status = MandateStatus::Closed;
-    assert_eq!(
-        after_verdict(&r, &m, NOW, &allow),
-        Ok(Next::Block(Reason::MandateClosed))
-    );
+    assert_eq!(after_verdict(&r, &m, NOW, &allow), Ok(Next::Block(Reason::MandateClosed)));
     assert_eq!(
         after_verdict(&r, &mandate(), EXPIRY, &allow),
         Ok(Next::Block(Reason::MandateExpired))
@@ -700,10 +439,7 @@ fn late_verdict_changes_nothing() {
 fn approve_rechecks_the_mandate() {
     let (r, owner) = (request(PaymentStatus::Parked), "owner.testnet");
     assert_eq!(approve_check(&r, &mandate(), owner, NOW), Ok(()));
-    assert_eq!(
-        approve_check(&r, &mandate(), "agent.testnet", NOW),
-        Err(Reason::NotOwner)
-    );
+    assert_eq!(approve_check(&r, &mandate(), "agent.testnet", NOW), Err(Reason::NotOwner));
     assert_eq!(
         approve_check(&request(PaymentStatus::Paid), &mandate(), owner, NOW),
         Err(Reason::BadRequestState)
@@ -714,23 +450,11 @@ fn approve_rechecks_the_mandate() {
     );
     let mut m = mandate();
     m.status = MandateStatus::Revoked;
-    assert_eq!(
-        approve_check(&r, &m, owner, NOW),
-        Err(Reason::MandateRevoked)
-    );
+    assert_eq!(approve_check(&r, &m, owner, NOW), Err(Reason::MandateRevoked));
     m.status = MandateStatus::Closed;
-    assert_eq!(
-        approve_check(&r, &m, owner, NOW),
-        Err(Reason::MandateClosed)
-    );
-    assert_eq!(
-        approve_check(&r, &mandate(), owner, EXPIRY),
-        Err(Reason::MandateExpired)
-    );
-    assert_eq!(
-        approve_check(&r, &mandate(), owner, NOW + TTL),
-        Err(Reason::ParkExpired)
-    );
+    assert_eq!(approve_check(&r, &m, owner, NOW), Err(Reason::MandateClosed));
+    assert_eq!(approve_check(&r, &mandate(), owner, EXPIRY), Err(Reason::MandateExpired));
+    assert_eq!(approve_check(&r, &mandate(), owner, NOW + TTL), Err(Reason::ParkExpired));
 }
 
 #[test]
@@ -749,23 +473,11 @@ fn stale_release() {
     const TIMEOUT: u64 = 1_000;
     let m = mandate();
     let parked = request(PaymentStatus::Parked);
-    assert_eq!(
-        stale_check(&parked, &m, NOW, TIMEOUT),
-        Err(Reason::NotStale)
-    );
-    assert_eq!(
-        stale_check(&parked, &m, NOW + TTL, TIMEOUT),
-        Ok(Stale::RejectParked)
-    );
+    assert_eq!(stale_check(&parked, &m, NOW, TIMEOUT), Err(Reason::NotStale));
+    assert_eq!(stale_check(&parked, &m, NOW + TTL, TIMEOUT), Ok(Stale::RejectParked));
     let checking = request(PaymentStatus::Checking);
-    assert_eq!(
-        stale_check(&checking, &m, NOW, TIMEOUT),
-        Err(Reason::NotStale)
-    );
-    assert_eq!(
-        stale_check(&checking, &m, NOW + TIMEOUT, TIMEOUT),
-        Ok(Stale::FailChecking)
-    );
+    assert_eq!(stale_check(&checking, &m, NOW, TIMEOUT), Err(Reason::NotStale));
+    assert_eq!(stale_check(&checking, &m, NOW + TIMEOUT, TIMEOUT), Ok(Stale::FailChecking));
     for status in [
         PaymentStatus::Paying,
         PaymentStatus::Paid,
@@ -790,6 +502,17 @@ fn withdraw_leaves_reserved_funds() {
     m.withdraw(900).unwrap();
     assert_eq!(m.balance, 100);
     assert_eq!(m.reserved, 100);
+}
+
+#[test]
+fn arithmetic_overflow_is_an_error_not_a_panic() {
+    let mut m = mandate();
+    assert_eq!(m.fund(u128::MAX), Err(Reason::Overflow));
+    assert_eq!(m.release(m.reserved + 1), Err(Reason::Overflow));
+    assert_eq!(m.settle_paid(m.reserved + 1), Err(Reason::Overflow));
+    m.reserved = u128::MAX;
+    assert_eq!(m.reserve(1, 1, 0, 0), Err(Reason::Overflow));
+    assert_eq!(m.balance, 1000);
 }
 
 #[derive(Clone, Debug)]

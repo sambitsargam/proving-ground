@@ -43,6 +43,7 @@ reasons! {
     RequestLimit => "REQUEST_LIMIT",
     CheckLimit => "CHECK_LIMIT",
     CheckerBudgetExhausted => "CHECKER_BUDGET_EXHAUSTED",
+    RulesPassed => "RULES_PASSED",
     // Checker outcomes.
     CheckerAllow => "CHECKER_ALLOW",
     CheckerWarn => "CHECKER_WARN",
@@ -88,10 +89,7 @@ mod tests {
         for reason in Reason::ALL {
             let code = reason.code();
             assert!(seen.insert(code), "duplicate {code}");
-            assert!(
-                code.bytes().all(|b| b.is_ascii_uppercase() || b == b'_'),
-                "{code}"
-            );
+            assert!(code.bytes().all(|b| b.is_ascii_uppercase() || b == b'_'), "{code}");
         }
     }
 }

@@ -87,10 +87,7 @@ pub fn evaluate<L: Ledger>(
     if amount > mandate.max_per_payment {
         return Err(Reason::OverPerPayment);
     }
-    let committed = mandate
-        .spent
-        .checked_add(mandate.reserved)
-        .ok_or(Reason::Overflow)?;
+    let committed = mandate.spent.checked_add(mandate.reserved).ok_or(Reason::Overflow)?;
     if amount > mandate.max_total.saturating_sub(committed) {
         return Err(Reason::OverTotal);
     }
@@ -114,10 +111,7 @@ pub fn evaluate<L: Ledger>(
     if mandate.checker_budget < check_cost {
         return Err(Reason::CheckerBudgetExhausted);
     }
-    Ok(Accepted {
-        amount,
-        invoice_hash,
-    })
+    Ok(Accepted { amount, invoice_hash })
 }
 
 fn parse_amount(text: &str) -> Option<u128> {
@@ -127,7 +121,7 @@ fn parse_amount(text: &str) -> Option<u128> {
     text.parse().ok().filter(|amount| *amount > 0)
 }
 
-pub(crate) fn parse_hash(text: &str) -> Option<[u8; 32]> {
+pub fn parse_hash(text: &str) -> Option<[u8; 32]> {
     let bytes = text.as_bytes();
     if bytes.len() != 64 {
         return None;

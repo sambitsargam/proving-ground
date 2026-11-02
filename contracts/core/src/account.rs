@@ -29,13 +29,7 @@ mod tests {
 
     #[test]
     fn accepts_normal_ids() {
-        for id in [
-            "acme.testnet",
-            "a1",
-            "pay.acme.near",
-            "a-b_c.near",
-            &"f".repeat(64),
-        ] {
+        for id in ["acme.testnet", "a1", "pay.acme.near", "a-b_c.near", &"f".repeat(64)] {
             assert!(valid(id), "{id}");
         }
     }

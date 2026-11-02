@@ -52,10 +52,7 @@ fn parse_verdict(value: &Value, request_id: u64) -> Option<CheckerOutcome> {
         .iter()
         .map(|reason| {
             let reason = reason.as_str()?;
-            KNOWN_REASONS
-                .iter()
-                .find(|known| **known == reason)
-                .copied()
+            KNOWN_REASONS.iter().find(|known| **known == reason).copied()
         })
         .collect::<Option<Vec<_>>>()?;
     match object.get("verdict")?.as_str()? {
@@ -121,9 +118,6 @@ mod tests {
 
     #[test]
     fn non_utf8_is_bad_output() {
-        assert_eq!(
-            parse_checker_output(&[0xff, 0xfe, 0x00], 42),
-            CheckerOutcome::BadOutput
-        );
+        assert_eq!(parse_checker_output(&[0xff, 0xfe, 0x00], 42), CheckerOutcome::BadOutput);
     }
 }

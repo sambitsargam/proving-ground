@@ -1,0 +1,25 @@
+[workspace]
+resolver = "2"
+members = [
+    "contracts/core",
+    "contracts/vault",
+    "contracts/mock-outlayer",
+    "contracts/mock-token",
+    "contracts/vault-tests",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[workspace.dependencies]
+near-sdk = "5.30"
+
+[profile.release]
+codegen-units = 1
+opt-level = "z"
+lto = true
+debug = false
+panic = "abort"
+overflow-checks = true
