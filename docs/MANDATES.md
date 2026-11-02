@@ -139,7 +139,7 @@ Unicode look-alikes never reach rule 9. NEAR account IDs are lowercase ASCII, so
 
 The contract sends the checker the request ID, mandate ID, payee, amount, token, purpose hash, invoice hash and an opaque pointer to the encrypted invoice and purpose. `input_data` is public on-chain, so plaintext never goes in it.
 
-The checker fetches and decrypts the pointer, and confirms both hashes match before calling the model. It must return exactly:
+The checker fetches and decrypts the pointer, and confirms both hashes match before calling the model. The model only copies facts out of the invoice, and code compares them with the payment. [services/checker](../services/checker/README.md) has the details. It must return exactly:
 
 ```json
 { "v": 1, "request_id": "42", "verdict": "ALLOW", "reasons": ["WITHIN_PURPOSE"] }
