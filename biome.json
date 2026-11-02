@@ -3,6 +3,7 @@
   "files": {
     "includes": [
       "packages/**/*.ts",
+      "services/blobs/src/**/*.ts",
       "attacks/src/**/*.ts",
       "agent/src/**/*.ts",
       "services/checker/tests/*.mjs",
