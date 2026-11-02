@@ -1,0 +1,18 @@
+{
+  "name": "provingground-demo-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Demo treasury agent that pays invoices through the guard SDK",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test src/*.test.ts"
+  },
+  "dependencies": {
+    "provingground-guard": "0.1.0"
+  },
+  "devDependencies": {
+    "provingground": "0.1.0"
+  }
+}
