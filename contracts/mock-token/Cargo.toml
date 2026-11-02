@@ -1,0 +1,13 @@
+[package]
+name = "mock-token"
+description = "Minimal NEP-141 token for vault tests"
+publish = false
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk.workspace = true

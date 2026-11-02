@@ -1,0 +1,13 @@
+[package]
+name = "mock-outlayer"
+description = "Test double for the OutLayer contract's request_execution yield/resume flow"
+publish = false
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk.workspace = true
