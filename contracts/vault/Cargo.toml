@@ -1,0 +1,13 @@
+[package]
+name = "provingground-vault"
+description = "Vault that pays agents' requests only inside owner-signed mandates"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk.workspace = true
+provingground-core = { path = "../core" }
