@@ -4,7 +4,7 @@ Proving Ground treats the AI as untrusted. The question this document answers is
 
 **Short answer:** vault funds can only go to a payee the owner listed, within the limits the owner set, or back to the owner. A fully compromised agent or checker cannot change that. They can still cause a bad payment to a listed payee, within those limits, and they can waste fees and block payments.
 
-**Status:** this is the design for review before the contract is written. Nothing here has been tested yet. Items that depend on the OutLayer path are marked *(pending live test)*.
+**Status:** the contract is implemented, and the defenses below that it enforces have tests against a mock of OutLayer. Nothing has run on testnet or against the real OutLayer yet. Items that depend on that are marked *(pending live test)*.
 
 Rules and reason codes are defined in [MANDATES.md](MANDATES.md).
 
@@ -94,12 +94,14 @@ The final column shows the worst result if that actor succeeds at everything wit
 | Compromised agent | Burn checker budget | `max_checks_per_day`, `checker_budget` | Budget lost, then requests stop |
 | Compromised agent | Spam refused requests | Agent pays its own gas; no state stored | Agent's allowance runs out |
 | Compromised agent | Claim a refund to a new address | No refund path exists; only payees or the owner | Nothing leaves |
-| Compromised agent | Oversized or garbled input | Rules 1–3 return a code without panicking | Refused |
+| Compromised agent | Attach too little gas to strand a request | `GAS_TOO_LOW` before anything is stored | Refused |
+| Compromised agent | Oversized or garbled input | Rules 1–3 return a code without panicking. A wrong JSON type fails the transaction with no state change | Refused |
 | Compromised checker | `ALLOW` everything | Runs only after the rules; cannot change payee or amount | Listed payee, within limits |
 | Compromised checker | Garbage, or no answer | Parked, never paid | Payments wait |
 | Malicious vendor | Bill too much or bill twice | Limits, checker, exact replay | **Can succeed within limits.** See "Limits" |
 | Fake token contract | Credit a mandate by calling `ft_on_transfer` | Caller must equal `mandate.token` | Refused |
 | Stranger | Use up a victim's daily cap | Cap is keyed by owner, not just agent | No effect on the victim |
+| Malicious token owner | List a fake token on their own mandate | Balances are per mandate and token, so it only affects that mandate | No effect on others |
 | Stranger | Call the callback directly | Callbacks are private | Refused |
 | Stranger | `release_stale` too early | Deadline check; only moves funds into the mandate | Refused |
 | Front-runner | Take or redirect a payment | Payee is fixed in the request; only the agent can call | Nothing to take |

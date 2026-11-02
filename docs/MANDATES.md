@@ -2,7 +2,7 @@
 
 A mandate is what a human authorized, written down where the agent cannot change it. Every payment the vault makes must fit inside one.
 
-The checker step below assumes the OutLayer verdict path. That path has not yet been run end to end on testnet, so its gas figures and the `payer_account_id` refund behavior are still to be confirmed. The rules themselves do not depend on it.
+The contract implements this spec, with tests against a mock of OutLayer that uses real yield/resume and follows OutLayer's published contract source. The path has not yet been run against the real OutLayer on testnet, so its gas figures and refund behavior are still to be confirmed there. The rules themselves do not depend on it.
 
 ## Data structures
 
@@ -15,19 +15,20 @@ Mandate
   token              Native | Ft(AccountId)
   max_total          u128          lifetime limit
   max_per_payment    u128
-  daily_cap          u128          per UTC day, shared across this owner's mandates, see below
   purpose_hash       [u8; 32]      sha256(salt || purpose text); the text and salt stay off-chain
   expires_at         u64           nanoseconds
   max_requests       u32           lifetime limit on stored requests, prepaid at creation
   max_checks_per_day u32           limit on paid checker calls
   park_ttl           u64           how long a parked payment waits for the owner
-  status             Active | Revoked   (expiry is derived from expires_at)
+  status             Active | Revoked | Closed   (expiry is derived from expires_at)
 
   balance            u128          funds held for this mandate, reserved funds included
   reserved           u128          held by requests in flight or parked
   spent              u128          paid out, never decreases
   checker_budget     u128          NEAR set aside for checker fees
   storage_balance    u128          NEAR prepaid for this mandate's storage
+  requests_stored    u32           requests accepted so far
+  checks_day, checks_today         daily count of paid checker calls
 
 PaymentRequest
   id, mandate_id, payee, amount, invoice_hash, blob_ref, memo
@@ -54,7 +55,7 @@ The salt on `purpose_hash` stops anyone guessing a short purpose and confirming 
 | `reject(request_id)` | owner | 1 yocto | Releases a parked request |
 | `revoke(mandate_id)` | owner | 1 yocto | Permanently stops the mandate |
 | `withdraw(mandate_id, amount)` | owner | 1 yocto | Returns unreserved funds to the owner |
-| `close(mandate_id)` | owner | 1 yocto | Refunds remaining balances when nothing is in flight |
+| `close(mandate_id)` | owner | 1 yocto | Ends the mandate and refunds the unused checker budget and storage prepayment. Needs nothing in flight and a zero balance |
 | `release_stale(request_id)` | anyone | none | Releases a request past its deadline; can only move funds back into the mandate |
 
 The agent's key is a function-call key with `receiver_id` set to the vault and `method_names` set to `["request_payment"]`. It cannot attach a deposit, so it cannot pass the 1 yocto check on any owner method. All funds leaving the vault go to a mandate's payee or its owner. There is no admin role and no method that takes a destination from the caller.
@@ -96,11 +97,18 @@ Revoke, expire, withdraw and close:
 - **Revoke** takes effect immediately. A request still in `Checking` is refused when its verdict arrives, and parked requests can no longer be approved. A transfer already in `Paying` has left the contract's control and settles normally.
 - **Expiry** is checked at request time, again when the verdict arrives, and again on approval. A mandate that expires during a check does not pay.
 - **Withdraw** can take `balance - reserved` at any time, including after revoke or expiry.
-- **Close** requires no requests in `Checking`, `Parked` or `Paying`. It refunds the balance, the unused checker budget and the storage that is released. Replay records for the owner stay on-chain, paid for out of the mandate's storage prepayment.
+- **Close** requires no requests in `Checking`, `Parked` or `Paying`, and a zero balance, so withdraw first. It refunds the unused checker budget and storage prepayment. Records already written, including replay records, stay on-chain and remain paid for. If the refund transfer fails, the amounts are restored and `close` can be called again.
 
 ## Contract rules
 
-These run in this order, and the first failure decides. Every argument that can be malformed arrives as a plain string. A malformed value then returns a reason code and an event, not a deserialization panic.
+These run in this order, and the first failure decides. Every argument that can be malformed arrives as a plain string. A malformed value then returns a reason code and an event, not a deserialization panic. Arguments of the wrong JSON type, or missing ones, still fail the transaction before any rule runs. That changes no state and spends only the caller's gas.
+
+Two checks come before rule 1:
+
+| Check | Reason code |
+| --- | --- |
+| Prepaid gas covers every stage of the flow. Without this, a compromised agent could attach too little gas to strand a request | `GAS_TOO_LOW` |
+| No deposit attached. Anything attached is returned | `DEPOSIT_NOT_ALLOWED` |
 
 | # | Rule | Reason code |
 | --- | --- | --- |
@@ -109,7 +117,7 @@ These run in this order, and the first failure decides. Every argument that can 
 | 3 | Invoice hash is 32 bytes of hex | `INVOICE_HASH_INVALID` |
 | 4 | Mandate exists | `MANDATE_NOT_FOUND` |
 | 5 | Caller is the mandate's agent | `NOT_AGENT` |
-| 6 | Mandate is not revoked | `MANDATE_REVOKED` |
+| 6 | Mandate is not revoked or closed | `MANDATE_REVOKED`, `MANDATE_CLOSED` |
 | 7 | Mandate is not expired | `MANDATE_EXPIRED` |
 | 8 | Payee is a valid account ID | `PAYEE_INVALID` |
 | 9 | Payee exactly matches an allowed payee | `PAYEE_NOT_ALLOWED` |
@@ -142,10 +150,10 @@ The checker fetches and decrypts the pointer, and confirms both hashes match bef
 | `ALLOW` | Pay | `CHECKER_ALLOW` |
 | `WARN` | Park for the owner | `CHECKER_WARN` |
 | `BLOCK` | Refuse | `CHECKER_BLOCK` |
-| Timeout, failed promise | Park for the owner | `CHECKER_UNAVAILABLE` |
-| Malformed output, wrong version, wrong request ID, any other verdict | Park for the owner | `CHECKER_BAD_OUTPUT` |
+| Timeout, failed promise, or `null` (OutLayer's result for a failed run) | Park for the owner | `CHECKER_UNAVAILABLE` |
+| Malformed or oversized output, wrong version, wrong request ID, any other verdict, extra fields | Park for the owner | `CHECKER_BAD_OUTPUT` |
 
-`reasons` must come from a fixed list. Free text from the model could repeat invoice contents into public logs, so it stays off-chain. Anything other than an exact `ALLOW` never pays by itself.
+`reasons` must come from a fixed list: `WITHIN_PURPOSE`, `OUT_OF_PURPOSE`, `AMOUNT_MISMATCH`, `PAYEE_MISMATCH`, `INJECTION_SUSPECTED`, `DUPLICATE_SUSPECTED`, `INVOICE_UNREADABLE`, `HASH_MISMATCH`, `UNCERTAIN`. Free text from the model could repeat invoice contents into public logs, so it stays off-chain. Anything other than an exact `ALLOW` never pays by itself.
 
 **The model can only say no.** The checker runs only after the contract rules pass, and its callback has no way to change the payee or the amount. Those are read from the stored request.
 
@@ -156,7 +164,7 @@ Limits can change between the request and the payout, so these are checked again
 | Rule | Reason code |
 | --- | --- |
 | Request is in the expected status | `BAD_REQUEST_STATE` |
-| Mandate is not revoked | `MANDATE_REVOKED` |
+| Mandate is not revoked or closed | `MANDATE_REVOKED`, `MANDATE_CLOSED` |
 | Mandate is not expired | `MANDATE_EXPIRED` |
 | Parked request is within `park_ttl` | `PARK_EXPIRED` |
 | Caller is the mandate's owner (approval only) | `NOT_OWNER` |
@@ -173,6 +181,8 @@ An invoice hash is recorded per owner, so one invoice cannot be paid through two
 | `Blocked` | Stays burned | Stops re-submitting the same invoice until the model gives a different answer |
 | `Rejected` | Stays burned | The owner said no |
 | `Failed` | Released | The transfer failed, so a retry is legitimate |
+
+An outage parks requests with their hash burned, so once one has expired or been rejected, the same bytes cannot be resubmitted. The owner approves it while parked, or the invoice is resubmitted as new bytes.
 
 Replay protection works on exact bytes. An agent that changes one character gets a new hash. Such a copy still has to fit the payee list and every limit, and it costs a check. See "Limits" in the threat model.
 
@@ -203,6 +213,14 @@ If a callback runs out of gas, a request can stay in `Checking` or `Paying`.
 - A `Checking` request can be released by anyone with `release_stale` once it is past its deadline, which is longer than the yield timeout. A late verdict finds the wrong status and pays nothing.
 - A `Paying` request is not released this way, because the transfer outcome is unknown and releasing it could double-spend the budget. Enough gas is reserved for that callback that this should not happen, and an integration test will cover it. If one is ever stuck, its budget stays held, which errs on the safe side.
 
+## Checker fees
+
+Each accepted request takes the fixed fee from `checker_budget` and attaches it to `request_execution`. OutLayer sends any unused part to `payer_account_id`, which is the mandate's owner. If OutLayer refuses the call outright, the fee returns to the vault and stays there unallocated, so the owner does not get it back. Token mandates also pay 1 yocto per check for `ft_transfer`.
+
+## Deployment settings
+
+The checker's source, version hash, fee and timeout are fixed at deployment, and there is no admin to change them. `check_timeout_ns` must be longer than the 200-block yield timeout, since `release_stale` lets anyone fail a request after that time. The vault's own code and base state need NEAR beyond what mandates hold, or transfers will fail with a storage error. Such a failure is safe, but payments stop until the vault is topped up.
+
 ## Storage
 
 Each mandate prepays for its own record plus `max_requests` stored requests and replay records, at the current storage byte cost. The agent's key cannot attach a deposit, so storage cannot be paid at request time. Requests beyond `max_requests` are refused. This keeps one mandate from using storage that another owner paid for.
@@ -214,7 +232,8 @@ Every decision is logged as a NEP-297 event, including refusals:
 ```text
 EVENT_JSON:{"standard":"provingground","version":"1.0.0","event":"payment_decided","data":[{
   "mandate_id":"7","request_id":"42","agent":"...","payee":"...","amount":"...",
-  "invoice_hash":"...","layer":"contract","decision":"BLOCK","reason":"PAYEE_NOT_ALLOWED"}]}
+  "invoice_hash":"...","layer":"checker","decision":"BLOCK","reason":"CHECKER_BLOCK",
+  "checker_reasons":["OUT_OF_PURPOSE"]}]}
 ```
 
 | Event | When |
@@ -224,5 +243,7 @@ EVENT_JSON:{"standard":"provingground","version":"1.0.0","event":"payment_decide
 | `payment_decided` | Any rule or verdict decides |
 | `payment_parked`, `payment_approved`, `payment_rejected` | Owner review |
 | `payment_settled` | Transfer finished, either way |
+| `call_refused` | An owner or funding call was refused |
+| `mandate_withdraw_failed` | A withdrawal transfer failed and the balance was restored |
 
-Refusals at the contract-rule stage have no `request_id`, because nothing is stored. Long or invalid inputs are logged by hash or length, not repeated, so an attacker cannot use the logs to publish their payload.
+Refusals at the contract-rule stage have no `request_id`, because nothing is stored. Invalid payees and all amounts and memos on those refusals are logged by length only, so an attacker cannot use the logs to publish their payload.
