@@ -1,0 +1,11 @@
+# The store for sealed invoices, on Render's free plan. It holds only encrypted blobs, and
+# loses them when the instance restarts, which is fine: each one is read seconds after upload.
+services:
+  - type: web
+    name: provingground-blobs
+    runtime: node
+    plan: free
+    buildCommand: npm ci --no-audit --no-fund && npm run build -w services/blobs
+    startCommand: node services/blobs/dist/main.js
+    healthCheckPath: /health
+    autoDeployTrigger: commit

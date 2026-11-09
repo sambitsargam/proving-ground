@@ -64,20 +64,31 @@ CHECKER_WASM_URL=<url> make testnet-deploy
 
 The checker's source and hash are fixed at deployment. A new checker build means a new vault.
 
-## 4. Secrets
+## 4. Invoice store
 
-The blob store has to be reachable from OutLayer's workers, so set `BLOB_BASE_URL` in `.env` to its public address first. Then:
+The checker fetches sealed invoices over the internet, so the store needs a public address. `render.yaml` describes it for Render's free plan.
+
+1. Push the repository to GitHub.
+2. In the Render dashboard, create a new Blueprint and pick the repository. Render reads `render.yaml`.
+3. Check `<service URL>/health` returns 200.
+4. Set `BLOB_BASE_URL=<service URL>/blobs` in `.env`.
+
+On the free plan the service sleeps after 15 minutes without traffic, and waking it takes about a minute. The agent's upload wakes it, so the first payment after a quiet spell is slow. A restart loses stored blobs. That is fine, because each one is read seconds after it is uploaded.
+
+## 5. Secrets
+
+Then:
 
 ```bash
 ./scripts/testnet-secrets.sh
 ```
 
-## 5. Demo state
+## 6. Demo state
 
 ```bash
 make demo-reset
 ```
 
-## 6. Lock the vault
+## 7. Lock the vault
 
 Before the bounty opens, delete every full-access key on the vault account. Nothing can then change its code. **This cannot be undone.** Fixes after that are a new deployment.

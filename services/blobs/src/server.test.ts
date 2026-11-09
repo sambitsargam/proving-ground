@@ -55,3 +55,40 @@ test("drops the oldest blob when full", async () => {
     assert.equal((await fetch(`${base}/${hash("c")}`)).status, 200);
   });
 });
+
+test("keeps total memory under its limit by dropping the oldest", async () => {
+  await withServer(blobServer({ maxTotalBytes: 20 }), async (base) => {
+    const bodies = ["a".repeat(8), "b".repeat(8), "c".repeat(8)];
+    for (const body of bodies) {
+      assert.equal((await fetch(`${base}/${hash(body)}`, { method: "PUT", body })).status, 201);
+    }
+    assert.equal((await fetch(`${base}/${hash(bodies[0] as string)}`)).status, 404);
+    assert.equal((await fetch(`${base}/${hash(bodies[2] as string)}`)).status, 200);
+  });
+});
+
+test("limits uploads per client, and not reads", async () => {
+  await withServer(blobServer({ uploadsPerMinute: 2 }), async (base) => {
+    const put = (body: string) => fetch(`${base}/${hash(body)}`, { method: "PUT", body });
+    assert.equal((await put("1")).status, 201);
+    assert.equal((await put("2")).status, 201);
+    assert.equal((await put("3")).status, 429);
+    assert.equal((await fetch(`${base}/${hash("1")}`)).status, 200);
+  });
+});
+
+test("only trusts a forwarded address when told it sits behind a proxy", async () => {
+  await withServer(blobServer({ uploadsPerMinute: 1 }), async (base) => {
+    const put = (body: string, ip: string) =>
+      fetch(`${base}/${hash(body)}`, { method: "PUT", body, headers: { "x-forwarded-for": ip } });
+    assert.equal((await put("x", "1.1.1.1")).status, 201);
+    // Spoofing the header does not buy a fresh allowance.
+    assert.equal((await put("y", "2.2.2.2")).status, 429);
+  });
+  await withServer(blobServer({ uploadsPerMinute: 1, behindProxy: true }), async (base) => {
+    const put = (body: string, ip: string) =>
+      fetch(`${base}/${hash(body)}`, { method: "PUT", body, headers: { "x-forwarded-for": ip } });
+    assert.equal((await put("x", "1.1.1.1")).status, 201);
+    assert.equal((await put("y", "2.2.2.2")).status, 201);
+  });
+});
