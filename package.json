@@ -6,7 +6,8 @@
     "packages/guard",
     "attacks",
     "agent",
-    "services/blobs"
+    "services/blobs",
+    "web"
   ],
   "engines": {
     "node": ">=22.18"

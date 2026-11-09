@@ -58,9 +58,14 @@ export type MakeWorld = () => Promise<World> | World;
 
 const mockWorld: MakeWorld = () => new MockWorld();
 
+/**
+ * `strictReasons` also requires the checker's exact reasons. Right for the stand-in model in
+ * mock mode. A real model may refuse for a different valid reason, which is still a stop.
+ */
 export async function runAttack(
   attack: Attack,
   makeWorld: MakeWorld = mockWorld,
+  strictReasons = true,
 ): Promise<AttackResult> {
   const world = await makeWorld();
   try {
@@ -73,6 +78,7 @@ export async function runAttack(
       attempt.reason === expect.reason &&
       (expect.decision === undefined || attempt.decision === expect.decision) &&
       (expect.checkerReasons === undefined ||
+        !strictReasons ||
         JSON.stringify(attempt.checkerReasons) === JSON.stringify(expect.checkerReasons));
     const solvent = await world.solvent();
     return {
@@ -136,7 +142,7 @@ export async function runSuite(options: SuiteOptions = {}): Promise<Report> {
   const chosen = attacks.filter((attack) => only === undefined || only.includes(attack.id));
   const results: AttackResult[] = [];
   for (const attack of chosen.filter(allowed)) {
-    const result = await runAttack(attack, makeWorld);
+    const result = await runAttack(attack, makeWorld, checkerControl);
     results.push(result);
     options.onResult?.(result);
   }
