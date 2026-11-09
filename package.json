@@ -7,7 +7,8 @@
     "attacks",
     "agent",
     "services/blobs",
-    "web"
+    "web",
+    "services/arena"
   ],
   "engines": {
     "node": ">=22.18"

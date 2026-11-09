@@ -83,12 +83,28 @@ The secrets can be read only by a run of this exact checker build, for a transac
 ./scripts/testnet-secrets.sh
 ```
 
-## 6. Demo state
+## 6. Arena and site
+
+`render.yaml` also describes the arena's backend and the static site. After Render picks up the new services, set these on **provingground-arena** in the dashboard:
+
+| Setting | Value |
+| --- | --- |
+| `AGENT_PRIVATE_KEY` | From `.env` |
+| `NEAR_AI_API_KEY` | From `.env` |
+| `BLOB_BASE_URL` | The invoice store's URL plus `/blobs` |
+| `WEB_ORIGIN` | The site's URL, so browsers on it may call the arena |
+| `ATTEMPTS_PER_HOUR`, `ATTEMPTS_PER_DAY` | Optional. Default 6 per visitor an hour, 300 in total a day |
+
+The site expects the arena at `https://provingground-arena.onrender.com`. If Render gives it another address, set `VITE_ARENA_URL` on **provingground-web** and redeploy it.
+
+The free arena sleeps after 15 minutes without traffic. The landing page and the arena page wake it when they open, but the first attack after a quiet spell can take about a minute.
+
+## 7. Demo state
 
 ```bash
 make demo-reset
 ```
 
-## 7. Lock the vault
+## 8. Lock the vault
 
 Before the bounty opens, delete every full-access key on the vault account. Nothing can then change its code. **This cannot be undone.** Fixes after that are a new deployment.

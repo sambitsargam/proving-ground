@@ -1,0 +1,33 @@
+.board {
+  padding-top: var(--space-6);
+  padding-bottom: var(--space-6);
+}
+
+.board-title {
+  font-size: clamp(36px, 5vw, 56px);
+}
+
+.board-lede {
+  margin: var(--space-2) 0 var(--space-4);
+  max-width: 60ch;
+}
+
+.board-empty .command {
+  margin: var(--space-2) 0 0;
+}
+
+.board .num {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.board-badge {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+}
+
+.board-badge .command {
+  margin: 0;
+}

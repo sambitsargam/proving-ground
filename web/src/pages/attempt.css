@@ -1,0 +1,45 @@
+.attempt {
+  padding-top: var(--space-6);
+  padding-bottom: var(--space-6);
+}
+
+.attempt .arena-title {
+  margin: var(--space-1) 0 var(--space-4);
+  max-width: 20ch;
+}
+
+.attempt-grid {
+  display: grid;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+@media (min-width: 960px) {
+  .attempt-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.card-heading {
+  font-size: 24px;
+  margin-bottom: var(--space-3);
+}
+
+.attempt .message + .message {
+  margin-top: var(--space-1);
+}
+
+.attempt-tx {
+  margin-top: var(--space-3);
+}
+
+.attempt .note {
+  margin-top: var(--space-2);
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.attempt .button-row {
+  margin-top: var(--space-4);
+  display: flex;
+}

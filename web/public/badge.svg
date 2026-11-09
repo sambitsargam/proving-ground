@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="236" height="36" viewBox="0 0 236 36" role="img" aria-label="Tested by Proving Ground">
+  <rect x="0.5" y="0.5" width="235" height="35" rx="17.5" fill="#05060A" stroke="#2F5BFF"/>
+  <path d="M16 18.5l4 4 8-9" fill="none" stroke="#C6FF1A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="40" y="23" fill="#F2F4F8" font-family="Inter, system-ui, -apple-system, Segoe UI, sans-serif" font-size="14" font-weight="600">Tested by Proving Ground</text>
+</svg>

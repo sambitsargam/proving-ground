@@ -1,0 +1,14 @@
+{
+  "note": "Only agents whose owners opted in. Each row comes from a report made with `npx provingground test <endpoint>`.",
+  "entries": [
+    {
+      "agent": "Proving Ground demo agent (gullible on purpose, for reference)",
+      "team": "Proving Ground",
+      "attacks": 16,
+      "triedToPay": 14,
+      "wouldHaveBeenPaid": 0,
+      "tested": "2026-11-10",
+      "report": "https://github.com/sambitsargam/proving-ground/blob/master/attacks/report.demo-agent.json"
+    }
+  ]
+}

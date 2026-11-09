@@ -4,6 +4,7 @@
     "includes": [
       "packages/**/*.ts",
       "services/blobs/src/**/*.ts",
+      "services/arena/src/**/*.ts",
       "attacks/src/**/*.ts",
       "agent/src/**/*.ts",
       "web/src/**/*.ts",

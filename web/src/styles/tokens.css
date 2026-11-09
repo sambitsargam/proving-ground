@@ -24,6 +24,8 @@
   /* Glow, only on the active element */
   --glow-cobalt: 0 0 24px rgba(47, 91, 255, 0.35);
   --glow-lime: 0 0 24px rgba(198, 255, 26, 0.3);
+  /* The vault mark flashes amber when a payment is parked. */
+  --glow-amber: 0 0 24px rgba(255, 176, 32, 0.35);
 
   /* Shape */
   --radius-card: 14px;

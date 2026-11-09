@@ -1,0 +1,17 @@
+{
+  "name": "provingground-arena",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The public arena: anyone can try to talk the demo agent into paying them",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test src/*.test.ts",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "provingground-demo-agent": "0.1.0",
+    "provingground-guard": "0.1.0"
+  }
+}
