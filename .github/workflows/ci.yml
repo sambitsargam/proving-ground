@@ -20,6 +20,9 @@ jobs:
             ~/.cargo/registry
             target
           key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+      - name: Install system libraries
+        # cargo-near links hidapi for hardware wallets, which needs libudev on Linux.
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev pkg-config
       - name: Install contract tools
         run: |
           rustup show active-toolchain || rustup toolchain install
