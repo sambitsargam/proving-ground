@@ -11,5 +11,11 @@
   "checker_wasm_sha256": "c1f2519e5cad750447e350d5e3abd5c64eff3c287488576ed845016a03302bb9",
   "vault_wasm_sha256": "c6b3aa8e4fdb6c208e368cd1104e8001585450283835f80037c51a42fe8b4270",
   "secrets_profile": "checker",
-  "fee_yocto": "10500015000000000000000"
+  "fee_yocto": "10500015000000000000000",
+  "mandate": {
+    "id": "20",
+    "payee": "provingground-vendor.testnet",
+    "purpose": "Monthly web hosting from Acme Hosting, up to 0.25 NEAR a month.",
+    "purpose_salt": "93e822e3e4fad8fb9795c31e532167f7"
+  }
 }
