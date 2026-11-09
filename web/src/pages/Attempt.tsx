@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import { Icon } from "../components/Icon.tsx";
 import { Pipeline } from "../components/Pipeline.tsx";
 import { Status } from "../components/Status.tsx";
-import { decodeAttempt } from "../lib/attempt.ts";
+import { type ChainCheck, checkAgainstChain, decodeAttempt } from "../lib/attempt.ts";
 import { decisionsOf, explorerUrl, nearText, shortHash } from "../lib/chain.ts";
 import { Link } from "../lib/router.tsx";
 import { stepsFor } from "../lib/steps.tsx";
 import "./arena.css";
 import "./attempt.css";
 
-type Check = "checking" | "verified" | "mismatch" | "unavailable" | "none";
+type Check = ChainCheck | "checking" | "none";
 
 /** A shared attempt. The verdict is checked against testnet; the message cannot be. */
 export function Attempt({ token }: { token: string }) {
@@ -20,14 +20,7 @@ export function Attempt({ token }: { token: string }) {
   useEffect(() => {
     if (!payment?.txHash) return;
     decisionsOf(payment.txHash).then(
-      (events) => {
-        const last = events.at(-1);
-        const matches =
-          last?.decision !== undefined &&
-          last.reason === payment.reason &&
-          (last.payee === undefined || last.payee === payment.payee);
-        setCheck(matches ? "verified" : events.length ? "mismatch" : "unavailable");
-      },
+      (events) => setCheck(checkAgainstChain(payment, events)),
       () => setCheck("unavailable"),
     );
   }, [payment]);

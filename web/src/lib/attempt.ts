@@ -1,4 +1,5 @@
 import type { Payment } from "./arena.ts";
+import type { DecidedEvent } from "./chain.ts";
 
 /**
  * A shareable attempt lives entirely in its link, so it needs no database. The decision is
@@ -27,6 +28,24 @@ export function encodeAttempt(attempt: Attempt): string {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+export type ChainCheck = "verified" | "mismatch" | "unavailable";
+
+/**
+ * Compares a link's claimed decision with the vault's last decision event in its transaction.
+ * Every field the chain records has to agree, so a link cannot turn a refusal into a payment.
+ */
+export function checkAgainstChain(payment: Payment, events: DecidedEvent[]): ChainCheck {
+  const last = events.at(-1);
+  if (!last) return "unavailable";
+  const agrees =
+    last.decision === payment.decision &&
+    last.reason === payment.reason &&
+    (last.layer === undefined || last.layer === payment.layer) &&
+    (last.payee === undefined || last.payee === payment.payee) &&
+    (last.amount_len === undefined || last.amount_len === payment.amount.length);
+  return agrees ? "verified" : "mismatch";
 }
 
 export function decodeAttempt(token: string): Attempt | null {

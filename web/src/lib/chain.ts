@@ -30,6 +30,8 @@ export interface DecidedEvent {
   decision?: string;
   reason?: string;
   layer?: string;
+  /** The amount itself stays private; only its length in yoctoNEAR digits is logged. */
+  amount_len?: number;
 }
 
 /** The vault's decision events for a transaction, read straight from a testnet RPC node. */
