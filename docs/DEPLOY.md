@@ -77,7 +77,7 @@ On the free plan the service sleeps after 15 minutes without traffic, and waking
 
 ## 5. Secrets
 
-Then:
+The secrets can be read only by a run of this exact checker build, for a transaction our agent signed, arriving through our vault. Run:
 
 ```bash
 ./scripts/testnet-secrets.sh

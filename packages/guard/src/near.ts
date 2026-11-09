@@ -22,6 +22,15 @@ interface ChainOutcome {
   receipts_outcome?: { outcome: { logs: string[] } }[];
 }
 
+/** The RPC stopped waiting. The transaction may still be running. */
+function isTimeout(error: unknown): boolean {
+  // near-kit does not export its request TimeoutError, so it is matched by name.
+  return (
+    error instanceof TransactionTimeoutError ||
+    (error instanceof Error && error.name === "TimeoutError")
+  );
+}
+
 export function eventsFromLogs(logs: string[]): VaultEvent[] {
   return logs.flatMap((log) => {
     if (!log.startsWith("EVENT_JSON:")) return [];
@@ -86,12 +95,19 @@ export class NearVault implements VaultClient {
 
   async requestPayment(args: PaymentArgs): Promise<VaultOutcome> {
     const { vaultId, accountId } = this.config;
-    const sent = await this.near
+    // Signed first, so the hash is known even if the RPC gives up while the checker runs.
+    const tx = await this.near
       .transaction(accountId)
       .functionCall(vaultId, "request_payment", args, { gas: REQUEST_GAS })
-      .send({ waitUntil: "INCLUDED" });
-    const hash = sent.transaction?.hash;
-    if (!hash) throw new Error("the RPC did not return a transaction hash");
+      .sign();
+    const hash = tx.getHash();
+    if (!hash) throw new Error("could not compute the transaction hash");
+    try {
+      const outcome = outcomeFromChain((await tx.send()) as ChainOutcome);
+      if (outcome) return outcome;
+    } catch (error) {
+      if (!isTimeout(error)) throw error;
+    }
 
     const deadline = Date.now() + MAX_WAIT_MS;
     while (Date.now() < deadline) {
@@ -100,7 +116,7 @@ export class NearVault implements VaultClient {
         const outcome = outcomeFromChain(status as ChainOutcome);
         if (outcome) return outcome;
       } catch (error) {
-        if (!(error instanceof TransactionTimeoutError)) throw error;
+        if (!isTimeout(error)) throw error;
       }
       const delay = this.config.pollIntervalMs ?? POLL_INTERVAL_MS;
       await new Promise((resolve) => setTimeout(resolve, delay));

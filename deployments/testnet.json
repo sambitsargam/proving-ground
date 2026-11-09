@@ -1,0 +1,15 @@
+{
+  "network": "testnet",
+  "vault": "provingground-vault.testnet",
+  "owner": "provingground-owner.testnet",
+  "agent": "provingground-agent.testnet",
+  "vendor": "provingground-vendor.testnet",
+  "attacker": "provingground-attacker.testnet",
+  "outlayer": "outlayer.testnet",
+  "checker_public_key": "3fc2ef5305d713609a503e2851494d60d218d3c52f6027fced387aa649b7060f",
+  "checker_wasm_url": "https://test.fastfs.io/provingground-owner.testnet/outlayer.testnet/c1f2519e5cad750447e350d5e3abd5c64eff3c287488576ed845016a03302bb9.wasm",
+  "checker_wasm_sha256": "c1f2519e5cad750447e350d5e3abd5c64eff3c287488576ed845016a03302bb9",
+  "vault_wasm_sha256": "c6b3aa8e4fdb6c208e368cd1104e8001585450283835f80037c51a42fe8b4270",
+  "secrets_profile": "checker",
+  "fee_yocto": "10500015000000000000000"
+}

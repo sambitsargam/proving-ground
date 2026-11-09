@@ -28,6 +28,13 @@ const RESOURCE_LIMITS = {
 const ENV_FILE = new URL("../.env", import.meta.url);
 const OUTPUT = new URL("../deployments/testnet.json", import.meta.url);
 
+/** Appends a line, starting a new one if the file does not end with a newline. */
+function appendEnv(line) {
+  const current = existsSync(ENV_FILE) ? readFileSync(ENV_FILE, "utf8") : "";
+  const separator = current === "" || current.endsWith("\n") ? "" : "\n";
+  appendFileSync(ENV_FILE, `${separator}${line}\n`);
+}
+
 function readEnvFile() {
   if (!existsSync(ENV_FILE)) return {};
   return Object.fromEntries(
@@ -80,13 +87,13 @@ if (!env.AGENT_PRIVATE_KEY) {
     vaultId: VAULT,
     allowance: AGENT_ALLOWANCE,
   });
-  appendFileSync(ENV_FILE, `AGENT_PRIVATE_KEY=${key.secretKey}\n`);
+  appendEnv(`AGENT_PRIVATE_KEY=${key.secretKey}`);
   console.log("Agent key added and saved to .env");
 }
 let checkerSecret = env.CHECKER_SECRET_KEY;
 if (!checkerSecret) {
   checkerSecret = randomBytes(32).toString("hex");
-  appendFileSync(ENV_FILE, `CHECKER_SECRET_KEY=${checkerSecret}\n`);
+  appendEnv(`CHECKER_SECRET_KEY=${checkerSecret}`);
   console.log("Checker key generated and saved to .env");
 }
 const checkerPublicKey = createPublicKey(
