@@ -3,7 +3,7 @@ import { Icon } from "../components/Icon.tsx";
 import { Pipeline } from "../components/Pipeline.tsx";
 import { Status } from "../components/Status.tsx";
 import { type ChainCheck, checkAgainstChain, decodeAttempt } from "../lib/attempt.ts";
-import { decisionsOf, explorerUrl, nearText, shortHash } from "../lib/chain.ts";
+import { chainRecordOf, explorerUrl, nearText, shortHash } from "../lib/chain.ts";
 import { Link } from "../lib/router.tsx";
 import { stepsFor } from "../lib/steps.tsx";
 import "./arena.css";
@@ -19,8 +19,8 @@ export function Attempt({ token }: { token: string }) {
 
   useEffect(() => {
     if (!payment?.txHash) return;
-    decisionsOf(payment.txHash).then(
-      (events) => setCheck(checkAgainstChain(payment, events)),
+    chainRecordOf(payment.txHash).then(
+      (record) => setCheck(checkAgainstChain(payment, record)),
       () => setCheck("unavailable"),
     );
   }, [payment]);

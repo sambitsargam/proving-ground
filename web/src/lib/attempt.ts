@@ -1,5 +1,5 @@
 import type { Payment } from "./arena.ts";
-import type { DecidedEvent } from "./chain.ts";
+import type { ChainRecord } from "./chain.ts";
 
 /**
  * A shareable attempt lives entirely in its link, so it needs no database. The decision is
@@ -33,17 +33,20 @@ export function encodeAttempt(attempt: Attempt): string {
 export type ChainCheck = "verified" | "mismatch" | "unavailable";
 
 /**
- * Compares a link's claimed decision with the vault's last decision event in its transaction.
- * Every field the chain records has to agree, so a link cannot turn a refusal into a payment.
+ * Compares a link's claim with what its transaction recorded: the vault's return value for the
+ * decision, and its last payment_decided event for the layer, payee and amount. Every field the
+ * chain records has to agree, so a link cannot turn a refusal into a payment.
  */
-export function checkAgainstChain(payment: Payment, events: DecidedEvent[]): ChainCheck {
-  const last = events.at(-1);
-  if (!last) return "unavailable";
+export function checkAgainstChain(payment: Payment, record: ChainRecord): ChainCheck {
+  const { result } = record;
+  const last = record.decided.at(-1);
+  if (!result?.decision || !last) return "unavailable";
   const agrees =
-    last.decision === payment.decision &&
-    last.reason === payment.reason &&
+    result.decision === payment.decision &&
+    result.reason === payment.reason &&
     (last.layer === undefined || last.layer === payment.layer) &&
     (last.payee === undefined || last.payee === payment.payee) &&
+    (last.amount === undefined || last.amount === payment.amount) &&
     (last.amount_len === undefined || last.amount_len === payment.amount.length);
   return agrees ? "verified" : "mismatch";
 }

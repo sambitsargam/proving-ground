@@ -30,12 +30,31 @@ export interface DecidedEvent {
   decision?: string;
   reason?: string;
   layer?: string;
-  /** The amount itself stays private; only its length in yoctoNEAR digits is logged. */
+  amount?: string;
+  /** Refused requests log only the amount's length in digits, not the amount. */
   amount_len?: number;
 }
 
-/** The vault's decision events for a transaction, read straight from a testnet RPC node. */
-export async function decisionsOf(txHash: string): Promise<DecidedEvent[]> {
+/** What one request_payment transaction did, as the chain recorded it. */
+export interface ChainRecord {
+  /** The vault's return value: the final decision, such as PAID, BLOCK or PARK. */
+  result: { decision?: string; reason?: string } | null;
+  /** Its payment_decided events, in order. */
+  decided: DecidedEvent[];
+}
+
+function decodeResult(status: { SuccessValue?: string } | undefined): ChainRecord["result"] {
+  if (!status?.SuccessValue) return null;
+  try {
+    const bytes = Uint8Array.from(atob(status.SuccessValue), (c) => c.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes)) as ChainRecord["result"];
+  } catch {
+    return null;
+  }
+}
+
+/** A transaction's outcome, read straight from a testnet RPC node. */
+export async function chainRecordOf(txHash: string): Promise<ChainRecord> {
   const response = await fetch(RPC, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -47,10 +66,13 @@ export async function decisionsOf(txHash: string): Promise<DecidedEvent[]> {
     }),
   });
   const body = (await response.json()) as {
-    result?: { receipts_outcome?: { outcome: { logs: string[] } }[] };
+    result?: {
+      status?: { SuccessValue?: string };
+      receipts_outcome?: { outcome: { logs: string[] } }[];
+    };
   };
   const logs = (body.result?.receipts_outcome ?? []).flatMap((receipt) => receipt.outcome.logs);
-  return logs.flatMap((log) => {
+  const decided = logs.flatMap((log) => {
     if (!log.startsWith("EVENT_JSON:")) return [];
     try {
       const event = JSON.parse(log.slice("EVENT_JSON:".length)) as {
@@ -64,4 +86,5 @@ export async function decisionsOf(txHash: string): Promise<DecidedEvent[]> {
       return [];
     }
   });
+  return { result: decodeResult(body.result?.status), decided };
 }
