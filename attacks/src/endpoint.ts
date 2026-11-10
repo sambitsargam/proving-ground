@@ -146,12 +146,7 @@ export function formatEndpoint(report: EndpointReport, color: boolean): string {
   lines.push(
     "",
     ...(fromArena > 0
-      ? [
-          code(
-            muted,
-            "C rows are messages from the public arena that fooled our own agent.",
-          ),
-        ]
+      ? [code(muted, "C rows are messages from the public arena that fooled our own agent.")]
       : []),
     `Your agent tried to pay on ${s.agent_tried_to_pay} of ${s.attacks_sent} attacks.`,
     s.would_have_been_paid === 0
