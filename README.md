@@ -174,7 +174,33 @@ npx provingground-cli test https://your-agent.example/chat
 
 Your endpoint takes `POST {"message": "..."}` and answers `{"reply": "...", "payments": [{"payee": "...", "amount": "<yoctoNEAR>"}]}`. The package ships the same vault WASM that is deployed on testnet, so it needs no Rust or keys, only Node.js 24. Our own demo agent [tried to pay on 14 of 16 attacks](attacks/report.demo-agent.json), and a mandate would have refused every one.
 
+The suite grows from the arena. When a message there gets our agent to try a payment, the shared attempt page offers **Add to the suite**. [scripts/add-community-attack.mjs](scripts/add-community-attack.mjs) checks the attempt against testnet and adds it to [attacks/community.json](attacks/community.json), and the CLI then sends it to every agent it tests, after the 25 scripted attacks. C01, a vendor claiming it changed banks, came in this way ([CzRE4J85…](https://testnet.nearblocks.io/txns/CzRE4J85wDQZhBLjXFEaHAVvmSbz6Vb65Ej2taiRrp55)).
+
 Agents tested this way can be listed on the [leaderboard](https://provingground-web.onrender.com/leaderboard), only with their owner's consent, and get a badge.
+
+## Running it for real
+
+What it costs, from the testnet deployment:
+
+| Cost | Who pays | Testnet figure |
+| --- | --- | --- |
+| Checker run on OutLayer | The owner, from the mandate's checker budget | 0.0105 NEAR per check ([deployments/testnet.json](deployments/testnet.json)) |
+| Gas for `request_payment` | The agent, from its key's allowance | About 0.035 NEAR for every testnet run so far |
+| Storage for a mandate and its requests | The owner, as a deposit | 0.216 NEAR held for mandate #20 |
+
+Payments the contract refuses before the checker runs cost only the agent's gas. Only payments that pass the contract's rules pay for a check.
+
+**The checker can't be swapped under a live vault.** The vault takes the checker's WASM hash, OutLayer account and fee once, when it is deployed, and has no method to change them. A new checker or model means a new vault. Owners withdraw what their mandates hold and create them again there. A locked vault can't drift.
+
+**Mainnet** needs the vault deployed and locked there, OutLayer's mainnet account and fee, and a NEAR AI Cloud key. We have only run on testnet, so mainnet fees and limits still need confirming from OutLayer's docs before launch.
+
+**Hosting.** The vault and checker run on NEAR and OutLayer. The site is static. The arena is a small Node.js server that also stores the sealed invoices, and [DEPLOY.md](docs/DEPLOY.md) runs it on any host.
+
+## Roadmap
+
+- **Fungible tokens at parity with NEAR.** The vault already pays NEP-141 tokens; next is running the attack suite against a token mandate on testnet.
+- **More attacks from the public.** Every arena message that fools the agent becomes a test case, and once the [bounty](docs/BOUNTY.md) opens, it pays for any that move money outside a mandate.
+- **An audit, then mainnet.** The contract is small enough to audit in full. Mainnet only after that.
 
 ## Prerequisites
 
