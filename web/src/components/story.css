@@ -69,16 +69,17 @@
   color: var(--cobalt-soft);
 }
 
-.is-animated .story-step {
-  opacity: 0.32;
+/* Inactive steps dim by color, not opacity, so their text keeps AA contrast. */
+.is-animated .story-step h3 {
+  color: var(--text-muted);
+  transition: color 400ms var(--ease-out);
 }
 
-.is-animated .story-step.is-done {
-  opacity: 0.55;
+.is-animated .story-step.is-active h3 {
+  color: var(--text);
 }
 
 .is-animated .story-step.is-active {
-  opacity: 1;
   transform: translateX(6px);
 }
 
@@ -440,9 +441,6 @@
   transform: none;
 }
 
-[data-stage="4"] .gate-checker .gate-label {
-  opacity: 0.5;
-}
 
 @media (max-width: 520px) {
   .story-stage {

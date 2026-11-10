@@ -15,21 +15,33 @@ function canRun3D(): boolean {
 }
 
 /**
- * The poster paints first. The 3D scene loads after that, and only on capable desktops.
+ * The poster paints first. The 3D scene loads once the page is quiet, and only on capable desktops.
  * Phones, reduced motion and no WebGL keep the poster.
  */
 export function Hero3D() {
   const [live, setLive] = useState(false);
   useEffect(() => {
     if (!canRun3D()) return;
+    // three.js is the heaviest thing on the page. Wait for the page to finish loading and go
+    // quiet, so it never delays the first paint or the first interaction.
+    let idle: number | undefined;
+    let timer: number | undefined;
     const start = () => setLive(true);
-    const idle = window.requestIdleCallback?.(start, { timeout: 1500 });
-    const timer = idle === undefined ? window.setTimeout(start, 300) : undefined;
+    const schedule = () => {
+      timer = window.setTimeout(() => {
+        idle = window.requestIdleCallback?.(start, { timeout: 2000 });
+        if (idle === undefined) start();
+      }, 1800);
+    };
+    if (document.readyState === "complete") schedule();
+    else window.addEventListener("load", schedule, { once: true });
     return () => {
-      if (idle !== undefined) window.cancelIdleCallback?.(idle);
+      window.removeEventListener("load", schedule);
       if (timer !== undefined) window.clearTimeout(timer);
+      if (idle !== undefined) window.cancelIdleCallback?.(idle);
     };
   }, []);
+
   return (
     <div className="hero-vault">
       <img

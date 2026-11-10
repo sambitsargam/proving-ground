@@ -21,13 +21,6 @@
   transform-origin: bottom center;
   mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent 70%);
   -webkit-mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent 70%);
-  animation: floor-drift 14s linear infinite;
-}
-
-@keyframes floor-drift {
-  to {
-    background-position: 0 72px;
-  }
 }
 
 .hero-inner {
@@ -272,14 +265,6 @@
   border-radius: 50%;
   background: radial-gradient(circle, rgba(47, 91, 255, 0.28), transparent 65%);
   filter: blur(24px);
-  animation: halo 7s ease-in-out infinite alternate;
-}
-
-@keyframes halo {
-  to {
-    transform: scale(1.08);
-    opacity: 0.75;
-  }
 }
 
 .hero-vault {
@@ -821,11 +806,6 @@ a.log-tx {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-floor,
-  .hero-halo {
-    animation: none;
-  }
-
   .ticker-track {
     animation: none;
   }
