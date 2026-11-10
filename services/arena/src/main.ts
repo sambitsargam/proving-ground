@@ -2,6 +2,7 @@
 // the guard SDK into the testnet vault. Configuration comes from the environment.
 
 import { readFileSync } from "node:fs";
+import { blobHandler } from "provingground-blobs";
 import { NearAiBrain, TreasuryAgent } from "provingground-demo-agent";
 import { Guard, HttpBlobStore } from "provingground-guard";
 import { NearVault } from "provingground-guard/near";
@@ -50,6 +51,8 @@ arenaServer({
   attemptsPerHour: Number(process.env.ATTEMPTS_PER_HOUR ?? 6),
   attemptsPerDay: Number(process.env.ATTEMPTS_PER_DAY ?? 300),
   behindProxy: onRender,
+  // The invoice store runs in this process too, so one always-on instance covers both.
+  blobs: blobHandler({ behindProxy: onRender }),
   ...(process.env.WEB_ORIGIN ? { allowedOrigin: process.env.WEB_ORIGIN } : {}),
 }).listen(port, () => {
   process.stdout.write(`arena listening on ${port}, mandate ${mandate.id}\n`);

@@ -11,6 +11,7 @@
     "start": "node dist/main.js"
   },
   "dependencies": {
+    "provingground-blobs": "0.1.0",
     "provingground-demo-agent": "0.1.0",
     "provingground-guard": "0.1.0"
   }

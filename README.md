@@ -80,7 +80,7 @@ The vault code's SHA-256 is `c6b3aa8e4fdb6c208e368cd1104e8001585450283835f80037c
 
 An honest payment went through end to end, through the real OutLayer checker and model: [BzzHg9tu…](https://testnet.nearblocks.io/txns/BzzHg9tu9scMYH7YcJPHaUZvyB2wtRp6onckPtdK4328). Its log shows the contract rules passing, OutLayer running the checker (about 2 seconds, 0.0013 NEAR), the checker's `ALLOW`, and the transfer settling.
 
-**Not locked yet.** The vault and agent accounts still have their full-access keys, so whoever holds them could redeploy the vault or bypass the agent's key. Removing them is the last deployment step ([DEPLOY.md](docs/DEPLOY.md#8-lock-the-vault)) and can't be undone. Check the current state with `view_access_key_list`.
+**Not locked yet.** The vault and agent accounts still have their full-access keys, so whoever holds them could redeploy the vault or bypass the agent's key. Removing them is the last deployment step ([DEPLOY.md](docs/DEPLOY.md#7-lock-the-vault)) and can't be undone. Check the current state with `view_access_key_list`.
 
 ## Attack suite
 
@@ -198,7 +198,7 @@ Agents tested this way can be listed on the [leaderboard](https://provingground-
 | [packages/guard](packages/guard) | The TypeScript SDK |
 | [agent](agent) | The demo treasury agent |
 | [attacks](attacks) | The 25 attacks, the CLI and the reports |
-| [services/arena](services/arena), [services/blobs](services/blobs) | The arena's backend and the sealed-invoice store |
+| [services/arena](services/arena), [services/blobs](services/blobs) | The arena's backend, and the sealed-invoice store it also serves |
 | [web](web) | The site: landing page, arena, attempt pages, leaderboard |
 | [docs](docs) | Architecture, mandates, threat model, deployment, bounty |
 

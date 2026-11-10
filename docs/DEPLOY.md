@@ -1,6 +1,6 @@
 # Deploying to testnet
 
-**Status:** the accounts exist. The remaining steps have not been run on testnet yet. The vault and agent key steps share their code with `make test-sandbox`, which runs them on a local node. The OutLayer steps are from its docs and CLI, and have never been run.
+**Status:** every step up to locking has been run on testnet. Locking has not, so the vault and agent accounts still have their full-access keys.
 
 ## 1. Accounts
 
@@ -64,16 +64,28 @@ CHECKER_WASM_URL=<url> make testnet-deploy
 
 The checker's source and hash are fixed at deployment. A new checker build means a new vault.
 
-## 4. Invoice store
+## 4. Arena, invoice store and site
 
-The checker fetches sealed invoices over the internet, so the store needs a public address. `render.yaml` describes it for Render's free plan.
+The checker fetches sealed invoices over the internet, so the store needs a public address. It runs inside the arena's server, under `/blobs/`. `render.yaml` describes the arena and the static site for Render's free plan.
 
 1. Push the repository to GitHub.
 2. In the Render dashboard, create a new Blueprint and pick the repository. Render reads `render.yaml`.
-3. Check `<service URL>/health` returns 200.
-4. Set `BLOB_BASE_URL=<service URL>/blobs` in `.env`.
+3. Set these on **provingground-arena** in the dashboard:
 
-On the free plan the service sleeps after 15 minutes without traffic, and waking it takes about a minute. The agent's upload wakes it, so the first payment after a quiet spell is slow. A restart loses stored blobs. That is fine, because each one is read seconds after it is uploaded.
+| Setting | Value |
+| --- | --- |
+| `AGENT_PRIVATE_KEY` | From `.env` |
+| `NEAR_AI_API_KEY` | From `.env` |
+| `BLOB_BASE_URL` | The arena's URL plus `/blobs` |
+| `WEB_ORIGIN` | The site's URL, so browsers on it may call the arena |
+| `ATTEMPTS_PER_HOUR`, `ATTEMPTS_PER_DAY` | Optional. Default 6 per visitor an hour, 300 in total a day |
+
+4. Check `<arena URL>/health` returns 200.
+5. Set the same `BLOB_BASE_URL` in `.env`, for the next step.
+
+The site expects the arena at `https://provingground-arena.onrender.com`. If Render gives it another address, set `VITE_ARENA_URL` on **provingground-web** and redeploy it.
+
+A free instance sleeps after 15 minutes without traffic and takes about a minute to wake, and an attack sent meanwhile can fail. To keep it awake, point an uptime monitor at `<arena URL>/health` every 10 minutes. One instance running all month fits in the free plan's 750 hours; two would not. A restart loses stored blobs. That is fine, because each one is read seconds after it is uploaded.
 
 ## 5. Secrets
 
@@ -83,28 +95,14 @@ The secrets can be read only by a run of this exact checker build, for a transac
 ./scripts/testnet-secrets.sh
 ```
 
-## 6. Arena and site
+Run it again whenever `BLOB_BASE_URL` changes, or the checker keeps reading from the old address.
 
-`render.yaml` also describes the arena's backend and the static site. After Render picks up the new services, set these on **provingground-arena** in the dashboard:
-
-| Setting | Value |
-| --- | --- |
-| `AGENT_PRIVATE_KEY` | From `.env` |
-| `NEAR_AI_API_KEY` | From `.env` |
-| `BLOB_BASE_URL` | The invoice store's URL plus `/blobs` |
-| `WEB_ORIGIN` | The site's URL, so browsers on it may call the arena |
-| `ATTEMPTS_PER_HOUR`, `ATTEMPTS_PER_DAY` | Optional. Default 6 per visitor an hour, 300 in total a day |
-
-The site expects the arena at `https://provingground-arena.onrender.com`. If Render gives it another address, set `VITE_ARENA_URL` on **provingground-web** and redeploy it.
-
-The free arena sleeps after 15 minutes without traffic. The landing page and the arena page wake it when they open, but the first attack after a quiet spell can take about a minute.
-
-## 7. Demo state
+## 6. Demo state
 
 ```bash
 make demo-reset
 ```
 
-## 8. Lock the vault
+## 7. Lock the vault
 
 Before the bounty opens, delete every full-access key on the vault account. Nothing can then change its code. **This cannot be undone.** Fixes after that are a new deployment.

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { createServer, type IncomingMessage, type Server } from "node:http";
+import { createServer, type IncomingMessage, type RequestListener, type Server } from "node:http";
 
 const MAX_BLOB_BYTES = 128 * 1024;
 const BLOB_PATH = /^\/blobs\/([0-9a-f]{64})$/;
@@ -24,6 +24,11 @@ export interface BlobServerOptions {
  * between the agent's upload and the checker's read, a few seconds later.
  */
 export function blobServer(options: BlobServerOptions = {}): Server {
+  return createServer(blobHandler(options));
+}
+
+/** The same store as a request handler, for a server that has other routes too. */
+export function blobHandler(options: BlobServerOptions = {}): RequestListener {
   const maxBlobs = options.maxBlobs ?? DEFAULT_MAX_BLOBS;
   const maxTotalBytes = options.maxTotalBytes ?? DEFAULT_MAX_TOTAL_BYTES;
   const uploadsPerMinute = options.uploadsPerMinute ?? DEFAULT_UPLOADS_PER_MINUTE;
@@ -60,7 +65,7 @@ export function blobServer(options: BlobServerOptions = {}): Server {
     totalBytes += body.length;
   };
 
-  return createServer((req, res) => {
+  return (req, res) => {
     const send = (status: number, body: string | Buffer = "") => {
       res.writeHead(status);
       res.end(body);
@@ -104,5 +109,5 @@ export function blobServer(options: BlobServerOptions = {}): Server {
       store(id, body);
       send(201);
     });
-  });
+  };
 }

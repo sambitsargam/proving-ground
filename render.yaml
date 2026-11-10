@@ -1,24 +1,16 @@
 # Render's free plan. Secrets are not declared here: set them on each service in the
 # dashboard. See docs/DEPLOY.md.
 services:
-  # Sealed invoices. Holds only encrypted blobs, and loses them on restart, which is fine:
-  # each one is read seconds after upload.
-  - type: web
-    name: provingground-blobs
-    runtime: node
-    plan: free
-    buildCommand: npm ci --no-audit --no-fund && npm run build -w services/blobs
-    startCommand: node services/blobs/dist/main.js
-    healthCheckPath: /health
-    autoDeployTrigger: commit
-
-  # The arena's backend: the demo agent paying through the testnet vault.
+  # The arena's backend: the demo agent paying through the testnet vault. It is also the
+  # sealed-invoice store, under /blobs/, so a single instance can be kept awake within the
+  # free plan's hours. The store loses its blobs on restart, which is fine: each one is read
+  # seconds after upload.
   # Dashboard settings: AGENT_PRIVATE_KEY, NEAR_AI_API_KEY, BLOB_BASE_URL, WEB_ORIGIN.
   - type: web
     name: provingground-arena
     runtime: node
     plan: free
-    buildCommand: npm ci --no-audit --no-fund && npm run build -w packages/guard -w attacks -w agent -w services/arena
+    buildCommand: npm ci --no-audit --no-fund && npm run build -w packages/guard -w attacks -w agent -w services/blobs -w services/arena
     startCommand: node services/arena/dist/main.js
     healthCheckPath: /health
     autoDeployTrigger: commit

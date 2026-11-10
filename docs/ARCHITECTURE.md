@@ -12,7 +12,7 @@ The design rule: everything that decides whether money moves is deterministic co
 | Checker model | NEAR AI Cloud, in a TEE | Only to refuse, through the checker |
 | [Guard SDK](../packages/guard) | The agent's process | Nothing. It is a convenience |
 | [Demo agent](../agent) | Our arena server | Nothing |
-| [Invoice store](../services/blobs) | Our server | Nothing. It only ever holds sealed blobs |
+| [Invoice store](../services/blobs) | Inside the arena's server | Nothing. It only ever holds sealed blobs |
 | [Arena](../services/arena) and [site](../web) | Our servers | Nothing. Attempt pages check claims against the chain |
 
 ## One payment, end to end
@@ -70,4 +70,4 @@ Mock mode doesn't model gas or storage staking. The sandbox tests cover those.
 
 The vault is deployed with its checker settings fixed: OutLayer's account, the checker's URL and hash, the fee, the resource limits and the timeout. There is no admin method to change them. Locking the vault, by deleting its full-access keys, makes that permanent. Steps are in [DEPLOY.md](DEPLOY.md).
 
-The hosted parts run on Render's free plan, from [render.yaml](../render.yaml): the invoice store, the arena's server and the static site.
+The hosted parts run on Render's free plan, from [render.yaml](../render.yaml): the arena's server, which also serves the invoice store, and the static site.

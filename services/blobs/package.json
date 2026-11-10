@@ -5,6 +5,12 @@
   "description": "Stores sealed invoices for the checker. Everything it holds is already encrypted",
   "license": "MIT",
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/server.d.ts",
+      "default": "./dist/server.js"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "node --test src/*.test.ts",

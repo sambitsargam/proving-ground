@@ -1,4 +1,4 @@
-import { createServer, type IncomingMessage, type Server } from "node:http";
+import { createServer, type IncomingMessage, type RequestListener, type Server } from "node:http";
 import type { AgentRun, PaymentAttempt } from "provingground-demo-agent";
 
 const MAX_BODY_BYTES = 16 * 1024;
@@ -19,6 +19,8 @@ export interface ArenaOptions {
   allowedOrigin?: string;
   /** Trust X-Forwarded-For, as behind Render's proxy. */
   behindProxy?: boolean;
+  /** Serves everything under /blobs/, so one instance can also be the invoice store. */
+  blobs?: RequestListener;
   now?: () => number;
 }
 
@@ -124,6 +126,10 @@ export function arenaServer(options: ArenaOptions): Server {
   };
 
   return createServer((req, res) => {
+    if (options.blobs && req.url?.startsWith("/blobs/")) {
+      options.blobs(req, res);
+      return;
+    }
     const headers: Record<string, string> = {
       "content-type": "application/json",
       "access-control-allow-origin": options.allowedOrigin ?? "*",

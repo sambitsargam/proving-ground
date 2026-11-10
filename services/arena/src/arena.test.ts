@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
+import { blobHandler } from "provingground-blobs";
 import { type AgentRun, ModelUnavailableError } from "provingground-demo-agent";
 import { type ArenaOptions, arenaServer } from "./arena.ts";
 
@@ -176,5 +178,17 @@ test("browsers on the web origin may call it", async () => {
     const response = await fetch(`${base}/api/attack`, { method: "OPTIONS" });
     assert.equal(response.status, 204);
     assert.equal(response.headers.get("access-control-allow-origin"), "https://example.test");
+  });
+});
+
+test("the invoice store is served from the same port", async () => {
+  await withArena({ blobs: blobHandler() }, async (base) => {
+    const blob = Buffer.from("sealed bytes");
+    const id = createHash("sha256").update(blob).digest("hex");
+    assert.equal((await fetch(`${base}/blobs/${id}`, { method: "PUT", body: blob })).status, 201);
+    const stored = await fetch(`${base}/blobs/${id}`);
+    assert.equal(stored.status, 200);
+    assert.deepEqual(Buffer.from(await stored.arrayBuffer()), blob);
+    assert.equal((await attack(base)).status, 200);
   });
 });
