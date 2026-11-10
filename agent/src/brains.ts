@@ -7,6 +7,11 @@ const TIMEOUT_MS = 60_000;
 /** Refusal behavior removed, so the demo shows what happens when the model is truly convinced. */
 export const DEFAULT_MODEL = "Qwen/Qwen3.8-27B-abliterated";
 
+/** The model provider is down or overloaded, as opposed to the agent doing something wrong. */
+export class ModelUnavailableError extends Error {
+  override name = "ModelUnavailableError";
+}
+
 export class NearAiBrain implements Brain {
   private readonly apiKey: string;
   private readonly model: string;
@@ -33,7 +38,13 @@ export class NearAiBrain implements Brain {
         chat_template_kwargs: { enable_thinking: false },
         messages,
       }),
+    }).catch((error: unknown) => {
+      // No answer at all, or none in time: the provider is unreachable.
+      throw new ModelUnavailableError(`model unreachable: ${String(error)}`);
     });
+    if (response.status === 429 || response.status >= 500) {
+      throw new ModelUnavailableError(`model returned HTTP ${response.status}`);
+    }
     if (!response.ok) throw new Error(`model returned HTTP ${response.status}`);
     const body = (await response.json()) as {
       choices?: {

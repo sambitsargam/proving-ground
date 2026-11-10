@@ -198,6 +198,14 @@ export function arenaServer(options: ArenaOptions): Server {
         (error: unknown) => {
           busy -= 1;
           process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+          // Matched by name so the arena does not depend on one model client.
+          if (error instanceof Error && error.name === "ModelUnavailableError") {
+            send(503, {
+              error:
+                "The model provider is not answering right now. Nothing was paid. Try again in a few minutes.",
+            });
+            return;
+          }
           send(502, { error: "The agent could not finish. Nothing was paid." });
         },
       );

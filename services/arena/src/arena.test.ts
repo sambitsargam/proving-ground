@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
-import type { AgentRun } from "provingground-demo-agent";
+import { type AgentRun, ModelUnavailableError } from "provingground-demo-agent";
 import { type ArenaOptions, arenaServer } from "./arena.ts";
 
 const VENDOR = "vendor.testnet";
@@ -152,6 +152,21 @@ test("a failing agent gives a clean error and no details", async () => {
       const response = await attack(base);
       assert.equal(response.status, 502);
       assert.ok(!(await response.text()).includes("secret"));
+    },
+  );
+});
+
+test("a model outage says so, and nothing is paid", async () => {
+  await withArena(
+    {
+      handle: async () => {
+        throw new ModelUnavailableError("model returned HTTP 500");
+      },
+    },
+    async (base) => {
+      const response = await attack(base);
+      assert.equal(response.status, 503);
+      assert.match(((await response.json()) as { error: string }).error, /model provider/);
     },
   );
 });
