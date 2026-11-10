@@ -88,3 +88,37 @@ export async function chainRecordOf(txHash: string): Promise<ChainRecord> {
   });
   return { result: decodeResult(body.result?.status), decided };
 }
+
+export interface MandateTotals {
+  payees: string[];
+  spent: string;
+  balance: string;
+}
+
+/** A mandate's running totals, read from the vault. Unlike arena counters, they never reset. */
+export async function mandateTotals(mandateId: string): Promise<MandateTotals | null> {
+  try {
+    const response = await fetch(RPC, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      signal: AbortSignal.timeout(8_000),
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: "pg",
+        method: "query",
+        params: {
+          request_type: "call_function",
+          finality: "final",
+          account_id: VAULT,
+          method_name: "get_mandate",
+          args_base64: btoa(JSON.stringify({ mandate_id: mandateId })),
+        },
+      }),
+    });
+    const body = (await response.json()) as { result?: { result?: number[] } };
+    if (!body.result?.result) return null;
+    return JSON.parse(new TextDecoder().decode(Uint8Array.from(body.result.result)));
+  } catch {
+    return null;
+  }
+}

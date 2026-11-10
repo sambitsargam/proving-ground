@@ -11,7 +11,15 @@ import { type ReportResult, SuiteTable } from "../components/SuiteTable.tsx";
 import { useCopy } from "../components/Toast.tsx";
 import { VaultMark } from "../components/VaultMark.tsx";
 import { stats as fetchStats, type Stats, wake } from "../lib/arena.ts";
-import { explorerUrl, nearText, REPO, shortHash, VAULT } from "../lib/chain.ts";
+import {
+  explorerUrl,
+  type MandateTotals,
+  mandateTotals,
+  nearText,
+  REPO,
+  shortHash,
+  VAULT,
+} from "../lib/chain.ts";
 import { useCountUp, useInView, useMagnetic } from "../lib/motion.ts";
 import { Link } from "../lib/router.tsx";
 import "./landing.css";
@@ -189,11 +197,13 @@ function UseIt() {
 
 export function Landing() {
   const [arena, setArena] = useState<Stats | null>(null);
+  const [mandate, setMandate] = useState<MandateTotals | null>(null);
   const primary = useMagnetic<HTMLAnchorElement>();
   const closing = useMagnetic<HTMLAnchorElement>();
   useEffect(() => {
     wake();
     fetchStats().then(setArena);
+    mandateTotals(deployment.mandate.id).then(setMandate);
   }, []);
 
   const hasLive = Boolean(arena?.recent.length);
@@ -325,6 +335,16 @@ export function Landing() {
               ? `Since ${new Date(arena.since).toLocaleString()}, when the arena last restarted.`
               : "From the scripted suite and the live testnet run. Arena counters appear while it is online."}
           </p>
+          {mandate && (
+            <p className="note chain-read mono">
+              <span className="live-dot" aria-hidden="true" /> Read from {VAULT} just now: mandate #
+              {deployment.mandate.id} has paid {nearText(mandate.spent)} NEAR in total, all of it to{" "}
+              {mandate.payees.length === 1
+                ? mandate.payees[0]
+                : `its ${mandate.payees.length} listed payees`}
+              . {nearText(mandate.balance)} NEAR is still in the vault.
+            </p>
+          )}
         </Reveal>
       </section>
 

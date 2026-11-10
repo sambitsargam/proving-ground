@@ -814,3 +814,15 @@ a.log-tx {
     overflow-x: auto;
   }
 }
+
+.chain-read {
+  margin-top: var(--space-1);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.chain-read .live-dot {
+  display: inline-block;
+  margin-right: 6px;
+  vertical-align: middle;
+}
