@@ -76,12 +76,11 @@ The checker fetches sealed invoices over the internet, so the store needs a publ
 | --- | --- |
 | `AGENT_PRIVATE_KEY` | From `.env` |
 | `NEAR_AI_API_KEY` | From `.env` |
-| `BLOB_BASE_URL` | The arena's URL plus `/blobs` |
 | `WEB_ORIGIN` | The site's URL, so browsers on it may call the arena |
 | `ATTEMPTS_PER_HOUR`, `ATTEMPTS_PER_DAY` | Optional. Default 6 per visitor an hour, 300 in total a day |
 
 4. Check `<arena URL>/health` returns 200.
-5. Set the same `BLOB_BASE_URL` in `.env`, for the next step.
+5. Set `BLOB_BASE_URL` in `.env` to the arena's URL plus `/blobs`, for the next step. The checker reads invoices from there. The arena itself writes them straight into its own store, without going through Render's proxy.
 
 The site expects the arena at `https://provingground-arena.onrender.com`. If Render gives it another address, set `VITE_ARENA_URL` on **provingground-web** and redeploy it.
 

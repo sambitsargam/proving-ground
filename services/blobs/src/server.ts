@@ -29,6 +29,21 @@ export function blobServer(options: BlobServerOptions = {}): Server {
 
 /** The same store as a request handler, for a server that has other routes too. */
 export function blobHandler(options: BlobServerOptions = {}): RequestListener {
+  return blobStore(options).handler;
+}
+
+export interface BlobStoreHandle {
+  /** Serves GET and PUT under /blobs/. */
+  handler: RequestListener;
+  /**
+   * Stores a blob from inside the same process, with no upload limit. Returns false if the
+   * id is not the blob's sha256 or the blob is too large.
+   */
+  put(id: string, body: Buffer): boolean;
+}
+
+/** One store, written to directly by its own process and over HTTP by anyone else. */
+export function blobStore(options: BlobServerOptions = {}): BlobStoreHandle {
   const maxBlobs = options.maxBlobs ?? DEFAULT_MAX_BLOBS;
   const maxTotalBytes = options.maxTotalBytes ?? DEFAULT_MAX_TOTAL_BYTES;
   const uploadsPerMinute = options.uploadsPerMinute ?? DEFAULT_UPLOADS_PER_MINUTE;
@@ -65,7 +80,10 @@ export function blobHandler(options: BlobServerOptions = {}): RequestListener {
     totalBytes += body.length;
   };
 
-  return (req, res) => {
+  const valid = (id: string, body: Buffer): boolean =>
+    body.length <= MAX_BLOB_BYTES && createHash("sha256").update(body).digest("hex") === id;
+
+  const handler: RequestListener = (req, res) => {
     const send = (status: number, body: string | Buffer = "") => {
       res.writeHead(status);
       res.end(body);
@@ -102,12 +120,21 @@ export function blobHandler(options: BlobServerOptions = {}): RequestListener {
         return;
       }
       const body = Buffer.concat(chunks);
-      if (createHash("sha256").update(body).digest("hex") !== id) {
+      if (!valid(id, body)) {
         send(400);
         return;
       }
       store(id, body);
       send(201);
     });
+  };
+
+  return {
+    handler,
+    put(id, body) {
+      if (!BLOB_PATH.test(`/blobs/${id}`) || !valid(id, body)) return false;
+      store(id, body);
+      return true;
+    },
   };
 }

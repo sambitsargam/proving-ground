@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import type { Server } from "node:http";
+import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
-import { blobServer } from "./server.ts";
+import { blobServer, blobStore } from "./server.ts";
 
 const hash = (text: string) => createHash("sha256").update(text).digest("hex");
 
@@ -90,5 +90,21 @@ test("only trusts a forwarded address when told it sits behind a proxy", async (
       fetch(`${base}/${hash(body)}`, { method: "PUT", body, headers: { "x-forwarded-for": ip } });
     assert.equal((await put("x", "1.1.1.1")).status, 201);
     assert.equal((await put("y", "2.2.2.2")).status, 201);
+  });
+});
+
+test("its own process can store blobs past the upload limit, but only under their hash", async () => {
+  const store = blobStore({ uploadsPerMinute: 1 });
+  await withServer(createServer(store.handler), async (base) => {
+    const id = hash("from the agent");
+    await fetch(`${base}/${hash("first")}`, { method: "PUT", body: "first" });
+    assert.equal(
+      (await fetch(`${base}/${id}`, { method: "PUT", body: "from the agent" })).status,
+      429,
+    );
+    assert.equal(store.put(id, Buffer.from("from the agent")), true);
+    assert.equal(await (await fetch(`${base}/${id}`)).text(), "from the agent");
+    assert.equal(store.put(id, Buffer.from("something else")), false);
+    assert.equal(store.put("../etc", Buffer.from("x")), false);
   });
 });

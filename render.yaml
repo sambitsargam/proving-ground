@@ -5,7 +5,7 @@ services:
   # sealed-invoice store, under /blobs/, so a single instance can be kept awake within the
   # free plan's hours. The store loses its blobs on restart, which is fine: each one is read
   # seconds after upload.
-  # Dashboard settings: AGENT_PRIVATE_KEY, NEAR_AI_API_KEY, BLOB_BASE_URL, WEB_ORIGIN.
+  # Dashboard settings: AGENT_PRIVATE_KEY, NEAR_AI_API_KEY, WEB_ORIGIN.
   - type: web
     name: provingground-arena
     runtime: node
