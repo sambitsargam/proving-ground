@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Icon } from "../components/Icon.tsx";
+import { ModelText } from "../components/ModelText.tsx";
 import { Pipeline } from "../components/Pipeline.tsx";
 import { Status } from "../components/Status.tsx";
 import { type ChainCheck, checkAgainstChain, decodeAttempt } from "../lib/attempt.ts";
@@ -52,7 +53,9 @@ export function Attempt({ token }: { token: string }) {
           </div>
           <div className="message">
             <p className="message-who">Agent</p>
-            <p className="message-text">{attempt.reply}</p>
+            <p className="message-text">
+              <ModelText text={attempt.reply} />
+            </p>
             {payment && (
               <p className="message-tried">
                 <Icon name="alert" size={14} />

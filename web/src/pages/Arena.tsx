@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Icon } from "../components/Icon.tsx";
+import { ModelText } from "../components/ModelText.tsx";
 import { Pipeline } from "../components/Pipeline.tsx";
 import { Status } from "../components/Status.tsx";
 import { VaultMark } from "../components/VaultMark.tsx";
@@ -126,7 +127,9 @@ export function Arena() {
               {turn.reply !== undefined && (
                 <div className="message">
                   <p className="message-who">Agent</p>
-                  <p className="message-text">{turn.reply || "(no reply)"}</p>
+                  <p className="message-text">
+                    {turn.reply ? <ModelText text={turn.reply} /> : "(no reply)"}
+                  </p>
                   {turn.payments?.map((p) => (
                     <p key={`${p.payee}-${p.amount}-${p.reason}`} className="message-tried">
                       <Icon name="alert" size={14} />
