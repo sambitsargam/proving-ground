@@ -16,3 +16,6 @@ target/
 .DS_Store
 skills-lock.json
 attacks/wasm/
+
+# Written by a mock run of the CLI in the repo root
+/report.json

@@ -3,7 +3,7 @@
 //
 //   node src/demo.ts "your jailbreak message"
 
-import { MockWorld } from "provingground/world";
+import { MockWorld } from "provingground-cli/world";
 import { TreasuryAgent } from "./agent.ts";
 import { DEFAULT_MODEL, NearAiBrain } from "./brains.ts";
 

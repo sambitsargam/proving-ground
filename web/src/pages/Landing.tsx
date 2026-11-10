@@ -221,7 +221,7 @@ export function Landing() {
           The suite plays an agent that always does what the attacker says, against the real
           contract. It needs no keys and no network.
         </p>
-        <CopyCommand command="npx provingground test" />
+        <CopyCommand command="npx provingground-cli test" />
         <div className="table-wrap">
           <table className="table">
             <caption className="visually-hidden">
@@ -286,7 +286,7 @@ export function Landing() {
               Point the suite at your agent's endpoint. It sends every attack, then runs whatever
               your agent tried against the contract.
             </p>
-            <CopyCommand command="npx provingground test https://your-agent/chat" />
+            <CopyCommand command="npx provingground-cli test https://your-agent/chat" />
             <p className="muted">
               The vault is <a href={`https://testnet.nearblocks.io/address/${VAULT}`}>{VAULT}</a>.
             </p>

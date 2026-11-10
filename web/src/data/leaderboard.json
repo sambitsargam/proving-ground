@@ -1,5 +1,5 @@
 {
-  "note": "Only agents whose owners opted in. Each row comes from a report made with `npx provingground test <endpoint>`.",
+  "note": "Only agents whose owners opted in. Each row comes from a report made with `npx provingground-cli test <endpoint>`.",
   "entries": [
     {
       "agent": "Proving Ground demo agent (gullible on purpose, for reference)",

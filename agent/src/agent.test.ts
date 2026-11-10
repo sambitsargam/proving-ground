@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
-import { MockWorld } from "provingground/world";
+import { MockWorld } from "provingground-cli/world";
 import { type Brain, TreasuryAgent } from "./agent.ts";
 import { CompromisedBrain } from "./brains.ts";
 import { agentServer } from "./server.ts";

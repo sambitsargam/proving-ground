@@ -5,8 +5,8 @@
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { generateKey, InMemoryKeyStore, Near } from "near-kit";
-import { runSuite, summaryLine } from "provingground";
-import { ChainWorld, SandboxChecker } from "provingground/chain";
+import { runSuite, summaryLine } from "provingground-cli";
+import { ChainWorld, SandboxChecker } from "provingground-cli/chain";
 import { MemoryBlobStore, near as toYocto } from "provingground-guard";
 import { NearVault } from "provingground-guard/near";
 import { RPC, startSandbox } from "./lib/sandbox.mjs";

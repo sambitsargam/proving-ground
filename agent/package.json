@@ -13,7 +13,7 @@
     "provingground-guard": "0.1.0"
   },
   "devDependencies": {
-    "provingground": "0.1.0"
+    "provingground-cli": "0.1.0"
   },
   "exports": {
     ".": {

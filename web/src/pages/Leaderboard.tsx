@@ -33,7 +33,7 @@ export function Leaderboard() {
             Run the suite against your agent, then open an issue with the report to be listed.
           </p>
           <div className="command">
-            <code>npx provingground test https://your-agent/chat</code>
+            <code>npx provingground-cli test https://your-agent/chat</code>
           </div>
         </div>
       ) : (

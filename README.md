@@ -169,7 +169,7 @@ const result = await guard.pay({ mandateId, payee, amount: near("12"), invoice }
 Test your agent with the suite. It sends every attack to your agent's endpoint, then runs whatever your agent tried against the real vault contract:
 
 ```bash
-npx provingground test https://your-agent.example/chat
+npx provingground-cli test https://your-agent.example/chat
 ```
 
 Your endpoint takes `POST {"message": "..."}` and answers `{"reply": "...", "payments": [{"payee": "...", "amount": "<yoctoNEAR>"}]}`. The package ships the same vault WASM that is deployed on testnet, so it needs no Rust or keys, only Node.js 24. Our own demo agent [tried to pay on 14 of 16 attacks](attacks/report.demo-agent.json), and a mandate would have refused every one.

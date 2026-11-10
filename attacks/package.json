@@ -1,5 +1,5 @@
 {
-  "name": "provingground",
+  "name": "provingground-cli",
   "version": "0.1.0",
   "description": "Attack an agent's payments: 25 scripted attacks against a contract-enforced mandate on NEAR",
   "license": "MIT",
@@ -25,7 +25,7 @@
   },
   "type": "module",
   "bin": {
-    "provingground": "./dist/cli.js"
+    "provingground": "dist/cli.js"
   },
   "files": [
     "dist",
@@ -39,8 +39,8 @@
     "prepublishOnly": "npm run build && node -e \"for (const f of ['vault.wasm','checker.wasm']) require('fs').statSync('wasm/' + f)\""
   },
   "dependencies": {
-    "provingground-guard": "0.1.0",
-    "near-kit": "0.20.2"
+    "near-kit": "0.20.2",
+    "provingground-guard": "0.1.0"
   },
   "exports": {
     ".": {

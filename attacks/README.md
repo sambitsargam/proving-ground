@@ -1,9 +1,9 @@
-# provingground
+# provingground-cli
 
 Find out which jailbreaks your AI agent falls for, and what a payment mandate on NEAR would have done about each one.
 
 ```bash
-npx provingground test
+npx provingground-cli test
 ```
 
 With no target, it runs 25 attacks against the real [Proving Ground](https://provingground-web.onrender.com) vault contract on a simulated NEAR runtime, with an agent that always does what the attacker asks. It needs no keys and no network, and ends with:
@@ -15,7 +15,7 @@ With no target, it runs 25 attacks against the real [Proving Ground](https://pro
 ## Test your own agent
 
 ```bash
-npx provingground test https://your-agent.example/chat
+npx provingground-cli test https://your-agent.example/chat
 ```
 
 Your endpoint takes `POST {"message": "..."}` and answers:

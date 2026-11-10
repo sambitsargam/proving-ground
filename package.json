@@ -24,7 +24,7 @@
     "typescript": "^7.0.2",
     "near-kit": "0.20.2",
     "provingground-guard": "0.1.0",
-    "provingground": "0.1.0"
+    "provingground-cli": "0.1.0"
   },
   "dependencies": {}
 }
