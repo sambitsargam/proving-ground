@@ -3,18 +3,40 @@
   "version": "0.1.0",
   "description": "Attack an agent's payments: 25 scripted attacks against a contract-enforced mandate on NEAR",
   "license": "MIT",
+  "keywords": [
+    "near",
+    "ai-agents",
+    "prompt-injection",
+    "security",
+    "payments",
+    "testing"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sambitsargam/proving-ground.git",
+    "directory": "attacks"
+  },
+  "homepage": "https://provingground-web.onrender.com",
+  "bugs": {
+    "url": "https://github.com/sambitsargam/proving-ground/issues"
+  },
+  "engines": {
+    "node": ">=24"
+  },
   "type": "module",
   "bin": {
     "provingground": "./dist/cli.js"
   },
   "files": [
     "dist",
-    "wasm"
+    "wasm",
+    "README.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "node --test src/*.test.ts",
-    "attack": "node src/cli.ts test --report report.json"
+    "attack": "node src/cli.ts test --report report.json",
+    "prepublishOnly": "npm run build && node -e \"for (const f of ['vault.wasm','checker.wasm']) require('fs').statSync('wasm/' + f)\""
   },
   "dependencies": {
     "provingground-guard": "0.1.0",

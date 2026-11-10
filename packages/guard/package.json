@@ -3,15 +3,44 @@
   "version": "0.1.0",
   "description": "Put an agent's payments behind a contract-enforced mandate on NEAR",
   "license": "MIT",
+  "keywords": [
+    "near",
+    "ai-agents",
+    "payments",
+    "mandate",
+    "security"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sambitsargam/proving-ground.git",
+    "directory": "packages/guard"
+  },
+  "homepage": "https://provingground-web.onrender.com",
+  "bugs": {
+    "url": "https://github.com/sambitsargam/proving-ground/issues"
+  },
+  "engines": {
+    "node": ">=24"
+  },
   "type": "module",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-    "./near": { "types": "./dist/near.d.ts", "default": "./dist/near.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./near": {
+      "types": "./dist/near.d.ts",
+      "default": "./dist/near.js"
+    }
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "node --test src/*.test.ts"
+    "test": "node --test src/*.test.ts",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "near-kit": "0.20.2"

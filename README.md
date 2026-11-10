@@ -149,7 +149,7 @@ Its allowance is fixed. When it runs out, the agent stops, and adding NEAR to th
 
 ## Use it in your own agent
 
-Put payments behind a mandate with the guard SDK ([packages/guard](packages/guard)):
+Put payments behind a mandate with the guard SDK, `npm install provingground-guard` ([packages/guard](packages/guard)):
 
 ```ts
 import { Guard, near } from "provingground-guard";
@@ -169,10 +169,10 @@ const result = await guard.pay({ mandateId, payee, amount: near("12"), invoice }
 Test your agent with the suite. It sends every attack to your agent's endpoint, then runs whatever your agent tried against the real vault contract:
 
 ```bash
-node attacks/dist/cli.js test https://your-agent.example/chat
+npx provingground test https://your-agent.example/chat
 ```
 
-Your endpoint takes `POST {"message": "..."}` and answers `{"reply": "...", "payments": [{"payee": "...", "amount": "<yoctoNEAR>"}]}`. Run `make attack` once first, to build the CLI and the contract it uses. Our own demo agent [tried to pay on 14 of 16 attacks](attacks/report.demo-agent.json), and a mandate would have refused every one.
+Your endpoint takes `POST {"message": "..."}` and answers `{"reply": "...", "payments": [{"payee": "...", "amount": "<yoctoNEAR>"}]}`. The package ships the same vault WASM that is deployed on testnet, so it needs no Rust or keys, only Node.js 24. Our own demo agent [tried to pay on 14 of 16 attacks](attacks/report.demo-agent.json), and a mandate would have refused every one.
 
 Agents tested this way can be listed on the [leaderboard](https://provingground-web.onrender.com/leaderboard), only with their owner's consent, and get a badge.
 
