@@ -1,0 +1,476 @@
+/* Anatomy of an attack. The visual is driven by data-stage (0 to 4) on .story-track and by
+   --progress, which the scroll hook writes. Static layouts get data-stage 4: all shown. */
+
+.story {
+  padding-top: var(--space-12);
+}
+
+.story-intro {
+  margin-bottom: var(--space-4);
+}
+
+.story-track.is-animated {
+  height: 480vh;
+}
+
+.story-track.is-animated .story-sticky {
+  position: sticky;
+  top: 64px;
+  height: calc(100vh - 64px);
+  display: flex;
+  align-items: center;
+}
+
+.story-grid {
+  display: grid;
+  gap: var(--space-6);
+  align-items: center;
+}
+
+@media (min-width: 960px) {
+  .story-grid {
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: var(--space-8);
+  }
+}
+
+/* The words */
+.story-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.story-step {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: var(--space-2);
+  transition:
+    opacity 400ms var(--ease-out),
+    transform 400ms var(--ease-out);
+}
+
+.story-step h3 {
+  font-size: 22px;
+  margin-bottom: 6px;
+}
+
+.story-step p {
+  color: var(--text-muted);
+  max-width: 44ch;
+}
+
+.story-num {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding-top: 6px;
+  color: var(--cobalt-soft);
+}
+
+.is-animated .story-step {
+  opacity: 0.32;
+}
+
+.is-animated .story-step.is-done {
+  opacity: 0.55;
+}
+
+.is-animated .story-step.is-active {
+  opacity: 1;
+  transform: translateX(6px);
+}
+
+.story-tx {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--space-1);
+  font-size: 14px;
+}
+
+/* The picture */
+.story-stage {
+  position: relative;
+  height: 680px;
+  max-width: 600px;
+  width: 100%;
+  font-size: 14px;
+}
+
+@media (min-width: 960px) and (max-height: 880px) {
+  .is-animated .story-stage {
+    transform: scale(0.8);
+    transform-origin: left center;
+  }
+}
+
+@media (max-width: 959px) {
+  .story-stage {
+    order: -1;
+  }
+}
+
+.story-rail {
+  position: absolute;
+  left: 21px;
+  top: 32px;
+  bottom: 70px;
+  width: 1px;
+  background: var(--border);
+}
+
+.story-rail::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(var(--threat), var(--cobalt) 55%, var(--lime));
+  transform-origin: top;
+  transform: scaleY(var(--progress, 1));
+}
+
+.story-who {
+  display: block;
+  margin-bottom: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.story-attacker,
+.story-reply {
+  padding: 12px var(--space-2);
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: var(--hairline);
+  line-height: 1.5;
+}
+
+.story-attacker {
+  position: absolute;
+  top: 0;
+  left: 56px;
+  right: 0;
+  border-left: 2px solid var(--threat);
+}
+
+.story-attacker .story-who {
+  color: var(--threat);
+}
+
+.story-agent {
+  position: absolute;
+  top: 124px;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.story-node {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  transition:
+    border-color 400ms var(--ease-out),
+    color 400ms var(--ease-out);
+}
+
+.story-reply {
+  color: var(--threat);
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 500ms var(--ease-out),
+    transform 500ms var(--ease-out);
+}
+
+/* The payment request, in two halves so it can break apart. */
+.story-packet {
+  position: absolute;
+  top: 0;
+  left: 56px;
+  right: 24px;
+  height: 40px;
+  opacity: 0;
+  transform: translateY(186px);
+  transition:
+    transform 700ms var(--ease-out),
+    opacity 400ms var(--ease-out);
+}
+
+.packet-half {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid var(--threat);
+  background: rgba(255, 61, 110, 0.1);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  transition:
+    transform 700ms var(--ease-out),
+    opacity 700ms var(--ease-out);
+}
+
+.packet-left {
+  clip-path: inset(0 50% 0 0);
+}
+
+.packet-right {
+  clip-path: inset(0 0 0 50%);
+}
+
+/* Gates */
+.story-gate {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+.gate-key {
+  top: 300px;
+}
+
+.gate-contract {
+  top: 440px;
+}
+
+.gate-checker {
+  top: 560px;
+}
+
+.gate-line {
+  position: absolute;
+  left: 44px;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: repeating-linear-gradient(90deg, var(--border) 0 6px, transparent 6px 10px);
+  transition:
+    background 400ms var(--ease-out),
+    box-shadow 400ms var(--ease-out);
+}
+
+.gate-label,
+.gate-verdict {
+  position: absolute;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gate-label {
+  left: 56px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.gate-verdict {
+  right: 0;
+  padding: 2px 10px;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: scale(0.9);
+  transition:
+    opacity 300ms var(--ease-out),
+    transform 300ms var(--ease-out);
+}
+
+.verdict-pass,
+.verdict-stop {
+  color: var(--lime);
+}
+
+.verdict-idle {
+  color: var(--text-muted);
+}
+
+.story-stamp {
+  position: absolute;
+  right: 8px;
+  top: 14px;
+  padding: 6px 12px;
+  border: 2px solid var(--lime);
+  border-radius: 8px;
+  color: var(--lime);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  opacity: 0;
+  transform: rotate(-6deg) scale(1.6);
+  transition:
+    opacity 260ms var(--ease-out),
+    transform 420ms var(--ease-out);
+}
+
+.story-result {
+  position: absolute;
+  left: 56px;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--lime);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 1.1;
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 500ms var(--ease-out),
+    transform 500ms var(--ease-out);
+}
+
+.story-zero {
+  font-size: 72px;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  text-shadow: 0 0 32px rgba(198, 255, 26, 0.35);
+}
+
+/* Stage 1: the model gives in and sends the request. */
+[data-stage="1"] .story-reply,
+[data-stage="2"] .story-reply,
+[data-stage="3"] .story-reply,
+[data-stage="4"] .story-reply {
+  opacity: 1;
+  transform: none;
+}
+
+[data-stage="1"] .story-node,
+[data-stage="2"] .story-node,
+[data-stage="3"] .story-node,
+[data-stage="4"] .story-node {
+  border-color: var(--threat);
+  color: var(--threat);
+}
+
+[data-stage="1"] .story-packet {
+  opacity: 1;
+  transform: translateY(212px);
+}
+
+/* Stage 2: through the key. */
+[data-stage="2"] .story-packet {
+  opacity: 1;
+  transform: translateY(340px);
+}
+
+[data-stage="2"] .gate-key .gate-verdict,
+[data-stage="3"] .gate-key .gate-verdict,
+[data-stage="4"] .gate-key .gate-verdict {
+  opacity: 1;
+  transform: none;
+}
+
+[data-stage="2"] .gate-key .gate-line,
+[data-stage="3"] .gate-key .gate-line,
+[data-stage="4"] .gate-key .gate-line {
+  background: var(--cobalt-soft);
+}
+
+/* Stage 3: the contract breaks it. */
+[data-stage="3"] .story-packet,
+[data-stage="4"] .story-packet {
+  opacity: 1;
+  transform: translateY(400px);
+}
+
+[data-stage="3"] .packet-left,
+[data-stage="4"] .packet-left {
+  transform: translate(-28px, 34px) rotate(-9deg);
+  opacity: 0;
+}
+
+[data-stage="3"] .packet-right,
+[data-stage="4"] .packet-right {
+  transform: translate(28px, 40px) rotate(7deg);
+  opacity: 0;
+}
+
+[data-stage="3"] .gate-contract .gate-line,
+[data-stage="4"] .gate-contract .gate-line {
+  background: var(--lime);
+  box-shadow: var(--glow-lime);
+}
+
+[data-stage="3"] .gate-contract .gate-verdict,
+[data-stage="4"] .gate-contract .gate-verdict,
+[data-stage="3"] .story-stamp,
+[data-stage="4"] .story-stamp {
+  opacity: 1;
+  transform: none;
+}
+
+[data-stage="3"] .story-stamp,
+[data-stage="4"] .story-stamp {
+  transform: rotate(-6deg);
+}
+
+/* Stage 4: the checker never runs, nothing leaves. */
+[data-stage="4"] .gate-checker .gate-verdict,
+[data-stage="4"] .story-result {
+  opacity: 1;
+  transform: none;
+}
+
+[data-stage="4"] .gate-checker .gate-label {
+  opacity: 0.5;
+}
+
+@media (max-width: 520px) {
+  .story-stage {
+    height: 760px;
+  }
+
+  .story-agent {
+    top: 150px;
+  }
+
+  .gate-key {
+    top: 330px;
+  }
+
+  .gate-contract {
+    top: 470px;
+  }
+
+  .gate-checker {
+    top: 610px;
+  }
+
+  .gate-verdict {
+    bottom: auto;
+    top: 10px;
+  }
+
+  .story-stamp {
+    top: 44px;
+  }
+}

@@ -1,11 +1,17 @@
-import { type AnchorHTMLAttributes, type MouseEvent, useEffect, useState } from "react";
+import { type ComponentProps, type MouseEvent, useEffect, useState } from "react";
 
 const listeners = new Set<() => void>();
 
 export function navigate(to: string): void {
   history.pushState(null, "", to);
   for (const listener of listeners) listener();
-  window.scrollTo(0, 0);
+  const hash = new URL(to, location.href).hash.slice(1);
+  if (!hash) {
+    window.scrollTo(0, 0);
+    return;
+  }
+  // The new page renders first, then the section it points at scrolls into view.
+  requestAnimationFrame(() => document.getElementById(hash)?.scrollIntoView());
 }
 
 export function usePath(): string {
@@ -23,10 +29,7 @@ export function usePath(): string {
 }
 
 /** An internal link that changes page without a reload. */
-export function Link({
-  href,
-  ...rest
-}: AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) {
+export function Link({ href, ...rest }: ComponentProps<"a"> & { href: string }) {
   const onClick = (event: MouseEvent<HTMLAnchorElement>) => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
     event.preventDefault();

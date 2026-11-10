@@ -1,28 +1,23 @@
-import { useEffect, useState } from "react";
+import { type CSSProperties, type KeyboardEvent, useEffect, useState } from "react";
 import mockReport from "../../../attacks/report.json";
 import liveReport from "../../../attacks/report.testnet.json";
+import { AttackStory } from "../components/AttackStory.tsx";
 import { Hero3D } from "../components/Hero3D.tsx";
 import { Icon } from "../components/Icon.tsx";
-import { Status } from "../components/Status.tsx";
+import { Reveal } from "../components/Reveal.tsx";
+import { type ReportResult, SuiteTable } from "../components/SuiteTable.tsx";
+import { useCopy } from "../components/Toast.tsx";
+import { VaultMark } from "../components/VaultMark.tsx";
 import { stats as fetchStats, type Stats, wake } from "../lib/arena.ts";
 import { explorerUrl, nearText, REPO, shortHash, VAULT } from "../lib/chain.ts";
+import { useCountUp, useInView, useMagnetic } from "../lib/motion.ts";
 import { Link } from "../lib/router.tsx";
 import "./landing.css";
 
-interface ReportResult {
-  id: string;
-  title: string;
-  layer: string;
-  decision: string;
-  reason: string;
-  checker_reasons: string[];
-  stopped: boolean;
-  tx_hash?: string;
-}
-
 const suite = mockReport.results as ReportResult[];
-const live = new Map((liveReport.results as ReportResult[]).map((r) => [r.id, r]));
-const liveStopped = (liveReport.results as ReportResult[]).filter((r) => r.stopped).length;
+const liveResults = liveReport.results as ReportResult[];
+const live = new Map(liveResults.map((r) => [r.id, r]));
+const liveStopped = liveResults.filter((r) => r.stopped).length;
 
 const SNIPPET = `import { Guard, near } from "provingground-guard";
 import { NearVault } from "provingground-guard/near";
@@ -31,34 +26,175 @@ const guard = new Guard({ vault: new NearVault(config), blobs, checkerPublicKey,
 const result = await guard.pay({ mandateId, payee, amount: near("12"), invoice });
 // result.paid, result.parked, result.reason, result.layer`;
 
+/** Splits a line into words that rise in one after another. Each word appears once per line. */
+function Words({ text, from = 0 }: { text: string; from?: number }) {
+  return (
+    <>
+      {text.split(" ").map((word, index) => (
+        <span key={word} className="word" style={{ "--i": from + index } as CSSProperties}>
+          {word}{" "}
+        </span>
+      ))}
+    </>
+  );
+}
+
 function CopyCommand({ command }: { command: string }) {
-  const [copied, setCopied] = useState(false);
+  const copy = useCopy();
   return (
     <div className="command">
+      <span className="command-prompt" aria-hidden="true">
+        $
+      </span>
       <code>{command}</code>
       <button
         type="button"
         className="button button-ghost button-small"
-        onClick={() => {
-          navigator.clipboard?.writeText(command).then(
-            () => setCopied(true),
-            () => {},
-          );
-        }}
+        onClick={() => copy(command, "Command copied")}
       >
-        {copied ? "Copied" : "Copy"}
+        <Icon name="copy" size={14} /> Copy
       </button>
+    </div>
+  );
+}
+
+/** The attacks from the suite drift past, each with what refused it. Decoration only. */
+function Ticker() {
+  const items = suite.map((result) => (
+    <span key={result.id} className="ticker-item">
+      <span className="ticker-attack">
+        <span className="mono">{result.id}</span> {result.title}
+      </span>
+      <span className="ticker-verdict">
+        <Icon name="shield" size={13} /> {result.reason}
+      </span>
+    </span>
+  ));
+  return (
+    <div className="ticker" aria-hidden="true">
+      <div className="ticker-track">
+        {items}
+        {items}
+      </div>
+    </div>
+  );
+}
+
+function Counter({
+  label,
+  value,
+  text,
+  unit,
+  safe = false,
+  note,
+}: {
+  label: string;
+  value: number;
+  /** Shown as is instead of counting, for amounts that are not whole numbers. */
+  text?: string;
+  unit?: string;
+  safe?: boolean;
+  note?: string;
+}) {
+  const [ref, seen] = useInView<HTMLDivElement>();
+  const shown = useCountUp(value, seen);
+  return (
+    <div ref={ref} className={`card counter${safe ? " counter-safe" : ""}`}>
+      <dt>{label}</dt>
+      <dd>
+        <span className="counter-value">{text ?? shown.toLocaleString()}</span>
+        {unit && <span className="counter-unit">{unit}</span>}
+      </dd>
+      {note && <dd className="counter-note">{note}</dd>}
+    </div>
+  );
+}
+
+function UseIt() {
+  const [tab, setTab] = useState<"sdk" | "cli">("sdk");
+  const copy = useCopy();
+  // Arrow keys move between tabs, as screen reader users expect.
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    const next = tab === "sdk" ? "cli" : "sdk";
+    setTab(next);
+    document.getElementById(`tab-${next}`)?.focus();
+  };
+  return (
+    <div className="card use-card">
+      <div className="tabs" role="tablist" aria-label="Ways to use it" onKeyDown={onKeyDown}>
+        <button
+          type="button"
+          role="tab"
+          id="tab-sdk"
+          aria-controls="panel-sdk"
+          aria-selected={tab === "sdk"}
+          tabIndex={tab === "sdk" ? 0 : -1}
+          className="chip"
+          onClick={() => setTab("sdk")}
+        >
+          <Icon name="contract" size={14} /> Pay through the guard
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id="tab-cli"
+          aria-controls="panel-cli"
+          aria-selected={tab === "cli"}
+          tabIndex={tab === "cli" ? 0 : -1}
+          className="chip"
+          onClick={() => setTab("cli")}
+        >
+          <Icon name="terminal" size={14} /> Test your agent
+        </button>
+      </div>
+      {tab === "sdk" ? (
+        <div role="tabpanel" id="panel-sdk" aria-labelledby="tab-sdk" className="tab-panel">
+          <div className="code-wrap">
+            <pre className="code">
+              <code>{SNIPPET}</code>
+            </pre>
+            <button
+              type="button"
+              className="button button-ghost button-small code-copy"
+              onClick={() => copy(SNIPPET, "Snippet copied")}
+            >
+              <Icon name="copy" size={14} /> Copy
+            </button>
+          </div>
+          <CopyCommand command="npm install provingground-guard" />
+        </div>
+      ) : (
+        <div role="tabpanel" id="panel-cli" aria-labelledby="tab-cli" className="tab-panel">
+          <p className="muted">
+            Point the suite at your agent's endpoint. It sends every attack, then runs whatever your
+            agent tried against the real contract, and tells you which payments a mandate would have
+            refused.
+          </p>
+          <CopyCommand command="npx provingground-cli test https://your-agent/chat" />
+          <p className="muted">
+            The vault is{" "}
+            <a href={`https://testnet.nearblocks.io/address/${VAULT}`} className="mono">
+              {VAULT}
+            </a>
+            .
+          </p>
+        </div>
+      )}
     </div>
   );
 }
 
 export function Landing() {
   const [arena, setArena] = useState<Stats | null>(null);
+  const primary = useMagnetic<HTMLAnchorElement>();
+  const closing = useMagnetic<HTMLAnchorElement>();
   useEffect(() => {
     wake();
     fetchStats().then(setArena);
   }, []);
 
+  const hasLive = Boolean(arena?.recent.length);
   const recent = arena?.recent.length
     ? arena.recent.slice(0, 8).map((entry) => ({
         key: `${entry.at}-${entry.txHash ?? entry.reason}`,
@@ -67,7 +203,7 @@ export function Landing() {
         reason: entry.reason,
         tx: entry.txHash,
       }))
-    : (liveReport.results as ReportResult[]).slice(0, 8).map((result) => ({
+    : liveResults.slice(0, 8).map((result) => ({
         key: result.id,
         label: result.id,
         decision: result.decision,
@@ -77,221 +213,187 @@ export function Landing() {
 
   return (
     <>
-      <section className="container hero" aria-labelledby="hero-title">
-        <div className="hero-copy">
-          <p className="eyebrow">Payment mandates for AI agents, on NEAR</p>
-          <h1 id="hero-title">
-            Jailbreak the model all you want.{" "}
-            <span className="hero-quiet">The money still can't leave.</span>
-          </h1>
-          <p className="hero-lede">
-            Your agent's payments are bound to what you signed, and a contract enforces it. A model
-            in a secure enclave checks each invoice too, but it can only ever refuse.
-          </p>
-          <div className="button-row">
-            <Link className="button button-primary" href="/arena">
-              Attack it <Icon name="arrow" />
-            </Link>
-            <a className="button button-ghost" href="#suite">
-              Run the suite
+      <section className="hero" aria-labelledby="hero-title">
+        <div className="hero-floor" aria-hidden="true" />
+        <div className="container hero-inner">
+          <div className="hero-copy">
+            <a className="hero-badge" href="#suite">
+              <span className="live-dot" aria-hidden="true" />
+              Live on NEAR testnet
+              <span className="hero-badge-sep" aria-hidden="true" />
+              <span className="mono">25 attacks · 0 NEAR lost</span>
             </a>
+            <h1 id="hero-title">
+              <Words text="Jailbreak the model all you want." />
+              <span className="hero-quiet">
+                <Words text="The money still" from={6} />
+                <span className="hero-lock">
+                  <Words text="can't leave." from={9} />
+                </span>
+              </span>
+            </h1>
+            <p className="hero-lede">
+              Your agent's payments are bound to what you signed, and a contract enforces it. A
+              model in a secure enclave checks each invoice too, but it can only ever refuse.
+            </p>
+            <div className="button-row">
+              <Link ref={primary} className="button button-primary" href="/arena">
+                Attack it <Icon name="arrow" />
+              </Link>
+              <a className="button button-ghost" href="#suite">
+                Run the suite
+              </a>
+            </div>
+          </div>
+          <div className="hero-visual">
+            <div className="hero-halo" aria-hidden="true" />
+            <Hero3D />
           </div>
         </div>
-        <Hero3D />
+        <Ticker />
       </section>
 
-      <section className="container section" aria-labelledby="layers-title">
-        <h2 id="layers-title" className="section-title">
-          Three layers. The model can only say no.
-        </h2>
-        <ol className="layers">
-          <li className="card layer">
-            <p className="eyebrow">01 · Mandate</p>
-            <h3>You sign the limits</h3>
-            <p className="muted">
-              Payees, amounts, a daily cap, an expiry and what the money is for, set from your own
-              wallet. The agent's only key can ask for a payment, nothing else.
-            </p>
-          </li>
-          <li className="card layer">
-            <p className="eyebrow">02 · Contract rules</p>
-            <h3>The contract checks every request</h3>
-            <p className="muted">
-              Wrong payee, over a limit, a replayed invoice, an expired mandate: refused with a
-              reason, before any model is involved.
-            </p>
-          </li>
-          <li className="card layer">
-            <p className="eyebrow">03 · TEE checker</p>
-            <h3>A model reads the invoice</h3>
-            <p className="muted">
-              Running in a secure enclave, it can stop a payment or send it to you. It cannot
-              approve anything the contract refused.
-            </p>
-          </li>
-        </ol>
-      </section>
+      <AttackStory />
 
       <section className="container section" aria-labelledby="numbers-title">
-        <h2 id="numbers-title" className="section-title">
-          {arena ? "The arena so far" : "The numbers"}
-        </h2>
-        {arena ? (
-          <dl className="counters">
-            <div className="card counter">
-              <dt>Attacks attempted</dt>
-              <dd>{arena.attempts.toLocaleString()}</dd>
-            </div>
-            <div className="card counter">
-              <dt>Payments stopped by the vault</dt>
-              <dd>{arena.stopped.toLocaleString()}</dd>
-            </div>
-            <div className="card counter counter-safe">
-              <dt>Funds lost</dt>
-              <dd>
-                {nearText(arena.lostYocto)} <span className="counter-unit">NEAR</span>
-              </dd>
-            </div>
-          </dl>
-        ) : (
-          <dl className="counters">
-            <div className="card counter">
-              <dt>Scripted attacks</dt>
-              <dd>{mockReport.summary.attacks}</dd>
-            </div>
-            <div className="card counter">
-              <dt>Stopped live on testnet</dt>
-              <dd>
-                {liveStopped}
-                <span className="counter-unit"> of {liveReport.results.length}</span>
-              </dd>
-            </div>
-            <div className="card counter counter-safe">
-              <dt>Funds lost</dt>
-              <dd>
-                0 <span className="counter-unit">NEAR</span>
-              </dd>
-            </div>
-          </dl>
-        )}
-        <p className="note">
-          {arena
-            ? `Since ${new Date(arena.since).toLocaleString()}, when the arena last restarted.`
-            : "From the scripted suite and the live testnet run. Arena counters appear while it is online."}
-        </p>
+        <Reveal>
+          <p className="eyebrow">{arena ? "Live arena" : "Proof"}</p>
+          <h2 id="numbers-title" className="section-title">
+            {arena ? "The arena so far" : "The numbers"}
+          </h2>
+        </Reveal>
+        <Reveal delay={80}>
+          {arena ? (
+            <dl className="counters">
+              <Counter label="Attacks attempted" value={arena.attempts} />
+              <Counter label="Payments stopped by the vault" value={arena.stopped} />
+              <Counter
+                label="Funds lost"
+                value={0}
+                text={nearText(arena.lostYocto)}
+                unit="NEAR"
+                safe
+                note="Anything paid outside the mandate would show here."
+              />
+            </dl>
+          ) : (
+            <dl className="counters">
+              <Counter label="Scripted attacks" value={mockReport.summary.attacks} />
+              <Counter
+                label="Stopped live on testnet"
+                value={liveStopped}
+                unit={`of ${liveResults.length}`}
+              />
+              <Counter
+                label="Funds lost"
+                value={0}
+                unit="NEAR"
+                safe
+                note="Real transactions, real model, real vault."
+              />
+            </dl>
+          )}
+          <p className="note">
+            {arena
+              ? `Since ${new Date(arena.since).toLocaleString()}, when the arena last restarted.`
+              : "From the scripted suite and the live testnet run. Arena counters appear while it is online."}
+          </p>
+        </Reveal>
       </section>
 
       <section className="container section" aria-labelledby="log-title">
-        <h2 id="log-title" className="section-title">
-          {arena?.recent.length ? "Live attack log" : "From the live testnet run"}
-        </h2>
-        <div className="card log" role="log" aria-label="Recent attacks">
-          {recent.map((line) => (
-            <p key={line.key} className="log-line">
-              <span className="log-id">{line.label}</span>
-              <span
-                className={
-                  line.decision === "PARK"
-                    ? "log-parked"
-                    : line.decision === "PAID"
-                      ? "log-paid"
-                      : "log-safe"
-                }
-              >
-                {line.decision}
+        <Reveal>
+          <h2 id="log-title" className="section-title">
+            {hasLive ? "Live attack log" : "From the live testnet run"}
+          </h2>
+        </Reveal>
+        <Reveal delay={80}>
+          <div className="terminal">
+            <div className="terminal-bar">
+              <span className="terminal-title mono">
+                {hasLive && <span className="live-dot" aria-hidden="true" />}
+                attack.log
               </span>
-              <span>{line.reason}</span>
-              {line.tx ? (
-                <a className="log-tx" href={explorerUrl(line.tx)}>
-                  {shortHash(line.tx)}
-                </a>
-              ) : (
-                <span className="log-tx">no tx</span>
-              )}
-            </p>
-          ))}
-        </div>
+              <span className="mono muted">{VAULT}</span>
+            </div>
+            <div className="log" role="log" aria-label="Recent attacks">
+              {recent.map((line, index) => (
+                <p key={line.key} className="log-line" style={{ "--line": index } as CSSProperties}>
+                  <span className="log-id">{line.label}</span>
+                  <span
+                    className={
+                      line.decision === "PARK"
+                        ? "log-parked"
+                        : line.decision === "PAID"
+                          ? "log-paid"
+                          : "log-safe"
+                    }
+                  >
+                    {line.decision}
+                  </span>
+                  <span>{line.reason}</span>
+                  {line.tx ? (
+                    <a className="log-tx" href={explorerUrl(line.tx)}>
+                      {shortHash(line.tx)}
+                    </a>
+                  ) : (
+                    <span className="log-tx">no tx</span>
+                  )}
+                </p>
+              ))}
+              <p className="log-line log-cursor" aria-hidden="true">
+                <span className="cursor" />
+              </p>
+            </div>
+          </div>
+        </Reveal>
       </section>
 
       <section className="container section" id="suite" aria-labelledby="suite-title">
-        <h2 id="suite-title" className="section-title">
-          25 attacks. A fully compromised agent. Nothing leaves.
-        </h2>
-        <p className="section-lede muted">
-          The suite plays an agent that always does what the attacker says, against the real
-          contract. It needs no keys and no network.
-        </p>
-        <CopyCommand command="npx provingground-cli test" />
-        <div className="table-wrap">
-          <table className="table">
-            <caption className="visually-hidden">
-              Every attack in the suite and what stopped it
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col">Attack</th>
-                <th scope="col">Stopped by</th>
-                <th scope="col">Reason</th>
-                <th scope="col">On testnet</th>
-              </tr>
-            </thead>
-            <tbody>
-              {suite.map((result) => {
-                const onChain = live.get(result.id);
-                return (
-                  <tr key={result.id}>
-                    <td>
-                      <span className="mono muted">{result.id}</span> {result.title}
-                    </td>
-                    <td>{result.layer}</td>
-                    <td className="mono">{result.reason}</td>
-                    <td>
-                      {onChain?.tx_hash ? (
-                        <a className="mono" href={explorerUrl(onChain.tx_hash)}>
-                          {shortHash(onChain.tx_hash)}
-                        </a>
-                      ) : onChain ? (
-                        <Status tone="safe">Refused</Status>
-                      ) : (
-                        <span className="muted">Mock only</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <p className="note">
-          "Mock only" attacks need control of the checker, which real OutLayer does not allow. Key
-          refusals happen before a transaction exists, so they have no hash.{" "}
-          <a href={`${REPO}/blob/master/docs/THREAT_MODEL.md`}>What it does not stop</a>.
-        </p>
+        <Reveal>
+          <p className="eyebrow">The suite</p>
+          <h2 id="suite-title" className="section-title">
+            25 attacks. A fully compromised agent. Nothing leaves.
+          </h2>
+          <p className="section-lede muted">
+            The suite plays an agent that always does what the attacker says, against the real
+            contract. It needs no keys and no network.
+          </p>
+          <CopyCommand command="npx provingground-cli test" />
+        </Reveal>
+        <Reveal delay={80}>
+          <SuiteTable suite={suite} live={live} />
+          <p className="note">
+            "Mock only" attacks need control of the checker, which real OutLayer does not allow. Key
+            refusals happen before a transaction exists, so they have no hash.{" "}
+            <a href={`${REPO}/blob/master/docs/THREAT_MODEL.md`}>What it does not stop</a>.
+          </p>
+        </Reveal>
       </section>
 
       <section className="container section" aria-labelledby="use-title">
-        <h2 id="use-title" className="section-title">
-          Put your own agent behind it
-        </h2>
-        <div className="two-up">
-          <div className="card">
-            <h3 className="card-title">Pay through the guard</h3>
-            <pre className="code">
-              <code>{SNIPPET}</code>
-            </pre>
-          </div>
-          <div className="card">
-            <h3 className="card-title">Test your agent</h3>
-            <p className="muted">
-              Point the suite at your agent's endpoint. It sends every attack, then runs whatever
-              your agent tried against the contract.
-            </p>
-            <CopyCommand command="npx provingground-cli test https://your-agent/chat" />
-            <p className="muted">
-              The vault is <a href={`https://testnet.nearblocks.io/address/${VAULT}`}>{VAULT}</a>.
-            </p>
-          </div>
-        </div>
+        <Reveal>
+          <p className="eyebrow">Use it</p>
+          <h2 id="use-title" className="section-title">
+            Put your own agent behind it
+          </h2>
+        </Reveal>
+        <Reveal delay={80}>
+          <UseIt />
+        </Reveal>
+      </section>
+
+      <section className="container closing" aria-labelledby="closing-title">
+        <Reveal className="closing-inner">
+          <VaultMark size={56} />
+          <h2 id="closing-title">Your turn. Make it pay you.</h2>
+          <p className="muted">
+            A real model with its refusals removed, a real vault on testnet, one listed vendor.
+          </p>
+          <Link ref={closing} className="button button-primary" href="/arena">
+            Attack it <Icon name="arrow" />
+          </Link>
+        </Reveal>
       </section>
     </>
   );

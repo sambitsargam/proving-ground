@@ -75,13 +75,16 @@ All three are OFL-licensed and self-hosted from npm packages, with `font-display
 | Attack log: mono, verdict colored | Landing page, arena |
 | Table: hairline rows, mono numbers | Leaderboard |
 | Badge: black pill, cobalt border, lime check | Leaderboard, READMEs |
-| Vault mark: flat cube, cobalt edges, lime ring | Header. The 3D hero vault comes next |
+| Vault mark: flat cube, cobalt edges, lime ring | Header, footer, closing call to action |
+| Chips, search, tabs, toasts | Suite filters, code tabs, copy and share confirmations |
 
 ## Motion
 
-- Transitions take 150 to 250ms with an ease-out curve.
+- Transitions take 150 to 250ms with an ease-out curve. Entrances (words, reveals, pages) take 400 to 800ms on the same curve.
 - The pipeline reveals its steps 180ms apart, and the deciding layer's glow builds once.
-- Nothing loops, bounces or flashes.
+- **Anatomy of an attack** is the signature: attack A01 replayed as you scroll, the request breaking on the contract line. Below 960px or with reduced motion it shows every stage at once.
+- Only three things move without being asked to: the hero's grid floor drifting, the attack ticker, and the live dot's slow ping. Nothing bounces or flashes.
+- Motion is CSS plus small hooks in `src/lib/motion.ts` (in view, scroll progress, count up, magnetic), with no animation library.
 - With `prefers-reduced-motion`, every animation and transition is off, and states change instantly. The phone screenshot was taken that way.
 
 ## Accessibility

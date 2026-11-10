@@ -180,7 +180,156 @@ code,
   color: var(--text-muted);
 }
 
+/* Scroll reveal: content lifts in once, the first time it is seen. */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 700ms var(--ease-out) var(--delay, 0ms),
+    transform 700ms var(--ease-out) var(--delay, 0ms);
+}
+
+.reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* Each page enters with a short lift. */
+.page {
+  animation: page-in 420ms var(--ease-out) both;
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+/* A faint film grain over the whole site, so large black areas read as material, not void. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.button-small {
+  min-height: 36px;
+  padding: 0 var(--space-2);
+  font-size: 14px;
+}
+
+.button-primary {
+  position: relative;
+  transition:
+    box-shadow var(--duration) var(--ease-out),
+    transform 300ms var(--ease-out),
+    background-color var(--duration) var(--ease-out);
+}
+
+.button svg {
+  transition: transform 300ms var(--ease-out);
+}
+
+.button:hover svg {
+  transform: translateX(3px);
+}
+
+.button-ghost:hover {
+  background: var(--surface);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  border: var(--hairline);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition:
+    color var(--duration) var(--ease-out),
+    border-color var(--duration) var(--ease-out),
+    background-color var(--duration) var(--ease-out);
+}
+
+.chip:hover {
+  color: var(--text);
+}
+
+.chip[aria-pressed="true"],
+.chip[aria-selected="true"] {
+  color: var(--text);
+  border-color: var(--cobalt);
+  background: rgba(47, 91, 255, 0.12);
+}
+
+.chip-count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.live-dot {
+  position: relative;
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--lime);
+}
+
+.live-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--lime);
+  animation: live-ping 2.4s var(--ease-out) infinite;
+}
+
+@keyframes live-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  70%,
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+.skeleton {
+  display: block;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--surface-2) 0%, var(--border) 50%, var(--surface-2) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+
   *,
   *::before,
   *::after {

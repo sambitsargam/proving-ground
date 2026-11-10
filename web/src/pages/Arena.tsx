@@ -1,8 +1,9 @@
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type CSSProperties, type FormEvent, useEffect, useRef, useState } from "react";
 import { Icon } from "../components/Icon.tsx";
 import { ModelText } from "../components/ModelText.tsx";
 import { Pipeline } from "../components/Pipeline.tsx";
 import { Status } from "../components/Status.tsx";
+import { useCopy } from "../components/Toast.tsx";
 import { VaultMark } from "../components/VaultMark.tsx";
 import { attack, type Payment, wake } from "../lib/arena.ts";
 import { encodeAttempt } from "../lib/attempt.ts";
@@ -42,7 +43,7 @@ export function Arena() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const copy = useCopy();
   const input = useRef<HTMLTextAreaElement>(null);
   useEffect(wake, []);
 
@@ -56,7 +57,6 @@ export function Arena() {
     const message = draft.trim();
     if (!message || busy) return;
     setBusy(true);
-    setCopied(false);
     setDraft("");
     const id = Date.now();
     setTurns((all) => [...all, { id, message }]);
@@ -84,10 +84,9 @@ export function Arena() {
       reply: latest.reply,
       ...(payment ? { payment } : {}),
     });
-    const url = `${location.origin}/attempt?t=${token}`;
-    navigator.clipboard?.writeText(url).then(
-      () => setCopied(true),
-      () => {},
+    copy(
+      `${location.origin}/attempt?t=${token}`,
+      "Link copied. Anyone can check it against the chain.",
     );
   }
 
@@ -142,9 +141,14 @@ export function Arena() {
             </div>
           ))}
           {busy && (
-            <p className="thinking muted" role="status">
-              The agent is thinking, then the vault decides. This takes 10 to 60 seconds.
-            </p>
+            <div className="message thinking" role="status">
+              <p className="message-who">Agent</p>
+              <span className="skeleton" style={{ width: "86%" }} />
+              <span className="skeleton" style={{ width: "62%" }} />
+              <p className="muted thinking-note">
+                The agent is thinking, then the vault decides. This takes 10 to 60 seconds.
+              </p>
+            </div>
           )}
         </div>
 
@@ -172,13 +176,25 @@ export function Arena() {
 
       <aside className="card arena-panel" aria-labelledby="panel-title">
         <div className="panel-head">
-          <span className={`panel-vault ${vaultState}`}>
+          <span className={`panel-vault ${busy ? "vault-busy" : vaultState}`}>
             <VaultMark size={32} />
           </span>
           <h2 id="panel-title">Decision</h2>
           {latest && <Status tone={outcome.tone}>{outcome.label}</Status>}
         </div>
-        {latest ? (
+        {busy ? (
+          <ol className="pipeline-waiting" aria-label="Waiting for the vault">
+            {["Jailbroken agent", "Function call key", "Contract rules", "TEE checker"].map(
+              (layer, index) => (
+                <li key={layer} style={{ "--step": index } as CSSProperties}>
+                  <span className="pipeline-node" aria-hidden="true" />
+                  <span>{layer}</span>
+                  <span className="skeleton" />
+                </li>
+              ),
+            )}
+          </ol>
+        ) : latest ? (
           <>
             <Pipeline
               key={turns.length}
@@ -192,15 +208,31 @@ export function Arena() {
                 </a>
               )}
               <button type="button" className="button button-ghost button-small" onClick={share}>
-                {copied ? "Link copied" : "Share this attempt"}
+                <Icon name="share" size={14} /> Share this attempt
               </button>
             </div>
           </>
         ) : (
-          <p className="muted">
-            Send an attack. Each layer's verdict appears here, with the reason code and the
-            transaction on testnet.
-          </p>
+          <div className="panel-empty">
+            <ol className="panel-preview" aria-hidden="true">
+              <li>
+                <Icon name="agent" size={16} /> Jailbroken agent
+              </li>
+              <li>
+                <Icon name="key" size={16} /> Function call key
+              </li>
+              <li>
+                <Icon name="contract" size={16} /> Contract rules
+              </li>
+              <li>
+                <Icon name="chip" size={16} /> TEE checker
+              </li>
+            </ol>
+            <p className="muted">
+              Send an attack. Each layer's verdict lights up here, with the reason code and the
+              transaction on testnet.
+            </p>
+          </div>
         )}
       </aside>
     </div>

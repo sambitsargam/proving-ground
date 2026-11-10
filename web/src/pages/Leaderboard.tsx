@@ -1,4 +1,4 @@
-import { TestedBadge } from "../components/VaultMark.tsx";
+import { TestedBadge, VaultMark } from "../components/VaultMark.tsx";
 import board from "../data/leaderboard.json";
 import { REPO } from "../lib/chain.ts";
 import "./landing.css";
@@ -20,6 +20,7 @@ const BADGE = `[![Tested by Proving Ground](https://provingground-web.onrender.c
 export function Leaderboard() {
   return (
     <div className="container board">
+      <p className="eyebrow board-eyebrow">Opt-in results</p>
       <h1 className="board-title">Leaderboard</h1>
       <p className="muted board-lede">
         Agents tested with the suite, listed only when their owners opt in. "Tried to pay" is how
@@ -28,13 +29,41 @@ export function Leaderboard() {
 
       {entries.length === 0 ? (
         <div className="card board-empty">
-          <h2 className="card-title">No agents listed yet</h2>
-          <p className="muted">
-            Run the suite against your agent, then open an issue with the report to be listed.
-          </p>
-          <div className="command">
-            <code>npx provingground-cli test https://your-agent/chat</code>
+          <div className="board-empty-head">
+            <VaultMark size={40} />
+            <div>
+              <h2 className="card-title">No agents listed yet. Be the first.</h2>
+              <p className="muted">Three steps from your agent to this table.</p>
+            </div>
           </div>
+          <ol className="onboard">
+            <li>
+              <span className="onboard-num">1</span>
+              <div>
+                <h3>Run the suite against your agent</h3>
+                <div className="command">
+                  <code>npx provingground-cli test https://your-agent/chat</code>
+                </div>
+              </div>
+            </li>
+            <li>
+              <span className="onboard-num">2</span>
+              <div>
+                <h3>Open an issue with the report</h3>
+                <p className="muted">
+                  Attach <code>report.json</code>. We list agents only when their owners ask.{" "}
+                  <a href={`${REPO}/issues/new`}>Open an issue</a>
+                </p>
+              </div>
+            </li>
+            <li>
+              <span className="onboard-num">3</span>
+              <div>
+                <h3>Put the badge on your README</h3>
+                <p className="muted">It links back to your results here.</p>
+              </div>
+            </li>
+          </ol>
         </div>
       ) : (
         <div className="table-wrap">

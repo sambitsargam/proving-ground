@@ -31,3 +31,70 @@
 .board-badge .command {
   margin: 0;
 }
+
+.board-eyebrow {
+  color: var(--cobalt-soft);
+  margin-bottom: var(--space-2);
+}
+
+.board-title {
+  letter-spacing: -0.035em;
+}
+
+.board-empty {
+  display: grid;
+  gap: var(--space-4);
+  background:
+    radial-gradient(70% 90% at 100% 0%, rgba(47, 91, 255, 0.1), transparent 60%), var(--surface);
+}
+
+.board-empty-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.board-empty-head .card-title {
+  margin-bottom: 4px;
+}
+
+.onboard {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.onboard li {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: var(--space-2);
+}
+
+.onboard h3 {
+  font-size: 18px;
+  margin: 6px 0 var(--space-1);
+}
+
+.onboard-num {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--cobalt);
+  color: var(--cobalt-soft);
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+.onboard .command {
+  margin: 0;
+}
+
+.board-badge {
+  padding: var(--space-4);
+  border: var(--hairline);
+  border-radius: var(--radius-card);
+}
