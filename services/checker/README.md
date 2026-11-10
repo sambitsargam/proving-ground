@@ -4,7 +4,7 @@ The veto-only third layer. It runs after the contract rules have passed and answ
 
 It is a WASI program built for OutLayer: input on stdin, verdict on stdout, secrets in the environment.
 
-**Status:** tested as a real WASM under Wasmtime 27 against the live NEAR AI model. It has not yet run inside OutLayer on testnet, so secret delivery, worker networking and the real fee are unconfirmed.
+**Status:** running in OutLayer on testnet for the deployed vault, with its keys delivered as OutLayer secrets. A check took about 2 seconds and cost 0.0013 NEAR, with the rest of the fee refunded. It is also tested as a WASM under Wasmtime 27 against the live NEAR AI model.
 
 ## What happens on a request
 

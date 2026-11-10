@@ -4,7 +4,7 @@ Proving Ground treats the AI as untrusted. The question this document answers is
 
 **Short answer:** vault funds can only go to a payee the owner listed, within the limits the owner set, or back to the owner. A fully compromised agent or checker cannot change that. They can still cause a bad payment to a listed payee, within those limits, and they can waste fees and block payments.
 
-**Status:** the contract is implemented, and the defenses below that it enforces have tests against a mock of OutLayer. The checker has run as a real WASM against the live model. The attack suite runs the real contract on a simulated runtime. Nothing has run on testnet or inside the real OutLayer yet. Items that depend on that are marked *(pending live test)*.
+**Status:** the vault is deployed on testnet with the checker running in OutLayer. An honest payment has gone through the whole path, and 22 of the 25 attacks have run there with real transactions and the real model, with nothing lost. The defenses below also have unit tests, sandbox tests against a mock of OutLayer, and a simulated runtime. The testnet vault is not locked yet: see path 5.
 
 Rules and reason codes are defined in [MANDATES.md](MANDATES.md).
 
@@ -17,7 +17,7 @@ Rules and reason codes are defined in [MANDATES.md](MANDATES.md).
 | Storage prepayment | Vault contract, per mandate | Used up, blocking new requests |
 | Agent gas | Agent account, function-call key allowance | Runs out, stopping the agent |
 | Invoice and purpose text | Sealed to the checker off-chain; plaintext only in the checker TEE and NEAR AI's enclaves | Exposed |
-| NEAR AI API key | Checker secret *(pending live test)* and hosted backend | Credits burned |
+| NEAR AI API key | OutLayer secret, and the arena's server | Credits burned |
 | Owner key | Owner's wallet | Everything the owner controls (out of scope) |
 | Vault deployment key | Deployer | Everything in the vault, until the key is removed |
 
@@ -59,7 +59,7 @@ These are all of the paths. The contract should have no others, and the tests an
 | 1 | Payout after `ALLOW` | Contract rules pass, then an exact `ALLOW` | Listed payee, all limits |
 | 2 | Payout after `approve` | Contract rules pass, then the owner's signature | Listed payee, all limits |
 | 3 | `withdraw` / `close` | Owner's signature | Only to the owner |
-| 4 | Checker fee to OutLayer *(pending live test)* | A request that passes the contract rules | `checker_budget`, `max_checks_per_day` |
+| 4 | Checker fee to OutLayer | A request that passes the contract rules | `checker_budget`, `max_checks_per_day` |
 | 5 | Redeploying the contract | **The vault account's full-access key** | **None. See below.** |
 | 6 | Bug in the contract | Unknown | Unknown. See "Limits". |
 
@@ -125,7 +125,7 @@ The look-alike cases are handled in [MANDATES.md](MANDATES.md#contract-rules): h
 | Add or remove keys | Be stolen. A thief then has what a compromised agent has |
 | Call any other contract or method | |
 
-This holds only if the agent account has no full-access key. The demo agent's account will have only this key, and the setup will check that.
+This holds only if the agent account has no full-access key. On testnet the demo agent still has its original full-access key, so this does not hold there yet. Removing it is part of locking the deployment.
 
 **Allowance is a real tradeoff.** NEAR's docs say a key with a set allowance stops working when it runs out, and adding funds to the account does not help. Leaving it unset removes that stop, but lets a compromised agent spend the account's whole balance on gas. We set an allowance and keep little NEAR on the agent account: running out stops the agent, it does not touch the vault, and the owner can issue a new key.
 
@@ -141,7 +141,7 @@ These are not fully solved, and the README must say so.
 6. **Fees are not vault funds.** A compromised agent can burn the checker budget and its own gas. The attack suite's "funds lost" counts vault funds, and will report checker fees burned as a separate number so the headline stays honest.
 7. **Daily cap boundary.** Days are UTC buckets, so up to twice the cap can move across midnight.
 8. **Metadata is public.** Mandate limits, payees, amounts, timing, hashes and verdict codes are all visible on-chain. Only invoice and purpose text are private. An exact invoice can be confirmed against its unsalted hash by anyone who can guess its contents.
-9. **Trust in TEEs and OutLayer** *(pending live test)*. We rely on Intel TDX, the OutLayer contract and its worker allowlist. If they fail, the checker is compromised, which is the bound above. If they leak, invoice text is exposed. Funds outside the mandate remain safe.
+9. **Trust in TEEs and OutLayer.** We rely on Intel TDX, the OutLayer contract and its worker allowlist. If they fail, the checker is compromised, which is the bound above. If they leak, invoice text is exposed. Funds outside the mandate remain safe.
 10. **Trust in the model's evidence.** NEAR AI's docs say gateway evidence plus one response signature do not yet form a complete chain from model to final response, and instances of a model share one signing key. The checker also does not verify the response signature at run time; it trusts its TLS connection to the gateway. Verdicts are therefore not stronger evidence than that.
 11. **Contract bugs.** The contract is unaudited. Tests and the public bounty reduce this risk, but do not remove it.
 12. **Owner key compromise** is out of scope, along with an owner being tricked into signing a bad mandate. The owner defines what is authorized, so a stolen owner key is authorized by definition.
