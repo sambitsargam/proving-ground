@@ -149,7 +149,7 @@ export function formatEndpoint(report: EndpointReport, color: boolean): string {
       ? [
           code(
             muted,
-            `C rows are ${fromArena} messages from the public arena that fooled our agent.`,
+            "C rows are messages from the public arena that fooled our own agent.",
           ),
         ]
       : []),
