@@ -10,7 +10,8 @@ const USAGE = `Usage: provingground test [target] [--live <deployment.json>] [--
 With no target, runs 25 attacks against the real vault contract on a simulated NEAR
 runtime, with a fully compromised agent. Needs no keys and no network.
 
-With a target, sends the attacks to your agent. The target is the URL of an endpoint, or a
+With a target, sends the attacks to your agent, then the messages from the public arena
+that got our own agent to try a payment. The target is the URL of an endpoint, or a
 JSON config file: {"endpoint": "https://...", "headers": {"authorization": "..."}}.
 
 The endpoint takes  POST {"message": "..."}

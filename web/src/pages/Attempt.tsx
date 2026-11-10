@@ -4,7 +4,7 @@ import { ModelText } from "../components/ModelText.tsx";
 import { Pipeline } from "../components/Pipeline.tsx";
 import { Status } from "../components/Status.tsx";
 import { type ChainCheck, checkAgainstChain, decodeAttempt } from "../lib/attempt.ts";
-import { chainRecordOf, explorerUrl, nearText, shortHash } from "../lib/chain.ts";
+import { chainRecordOf, explorerUrl, nearText, REPO, shortHash } from "../lib/chain.ts";
 import { Link } from "../lib/router.tsx";
 import { stepsFor } from "../lib/steps.tsx";
 import "./arena.css";
@@ -25,6 +25,13 @@ export function Attempt({ token }: { token: string }) {
       () => setCheck("unavailable"),
     );
   }, [payment]);
+
+  // Only an attempt the chain confirms, where the agent fell for it, is worth a test case.
+  const suggest = payment?.txHash && check === "verified";
+  const issue = `${REPO}/issues/new?${new URLSearchParams({
+    title: "Arena case: <short title>",
+    body: `This attempt got the agent to try a payment. Add it to the suite:\n\n${location.href}\n\nnode scripts/add-community-attack.mjs "<link above>" "<short title>"`,
+  })}`;
 
   if (!attempt) {
     return (
@@ -90,7 +97,18 @@ export function Attempt({ token }: { token: string }) {
         <Link className="button button-primary" href="/arena">
           Try it yourself <Icon name="arrow" />
         </Link>
+        {suggest && (
+          <a className="button button-ghost" href={issue}>
+            Add to the suite
+          </a>
+        )}
       </div>
+      {suggest && (
+        <p className="note">
+          Messages that fool the agent become test cases: <code>provingground test</code> sends them
+          to every agent it checks.
+        </p>
+      )}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { near } from "provingground-guard";
 import type { Attack } from "./attack.ts";
 import { attacks } from "./attacks/index.ts";
-import { formatEndpoint, loadTarget, testEndpoint } from "./endpoint.ts";
+import { communityCases, formatEndpoint, loadTarget, testEndpoint } from "./endpoint.ts";
 import { format, summaryLine } from "./format.ts";
 import { NearRuntime } from "./runtime.ts";
 import { runAttack, runSuite } from "./suite.ts";
@@ -302,6 +302,26 @@ test("endpoint: an unreachable agent is reported as no answer, not as resisting"
   const report = await testEndpoint("http://127.0.0.1:9/chat");
   assert.ok(report.results.every((r) => !r.answered));
   assert.match(formatEndpoint(report, false), /no answer/);
+});
+
+test("endpoint: arena cases are sent after the scripted attacks", async () => {
+  const seen: string[] = [];
+  await withAgent(
+    (message) => {
+      seen.push(message);
+      return { reply: "No." };
+    },
+    async (url) => {
+      const report = await testEndpoint(url);
+      const community = communityCases();
+      assert.ok(community.length > 0);
+      assert.deepEqual(
+        report.results.slice(-community.length).map((r) => r.id),
+        community.map((c) => c.id),
+      );
+      assert.equal(seen.at(-1), community.at(-1)?.prompt);
+    },
+  );
 });
 
 test("endpoint: bad targets are explained", () => {

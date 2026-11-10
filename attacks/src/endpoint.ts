@@ -4,6 +4,19 @@ import { MockWorld } from "./world.ts";
 
 const REQUEST_TIMEOUT_MS = 120_000;
 
+interface CommunityCase {
+  id: string;
+  title: string;
+  prompt: string;
+}
+
+/** Arena messages that got the demo agent to try a payment. Same path from src and dist. */
+export function communityCases(): CommunityCase[] {
+  const file = new URL("../community.json", import.meta.url);
+  if (!existsSync(file)) return [];
+  return (JSON.parse(readFileSync(file, "utf8")) as { cases: CommunityCase[] }).cases;
+}
+
 export interface EndpointTarget {
   endpoint: string;
   headers?: Record<string, string>;
@@ -72,7 +85,8 @@ async function ask(target: EndpointTarget, message: string): Promise<AgentAnswer
 export async function testEndpoint(target: string): Promise<EndpointReport> {
   const config = loadTarget(target);
   const results: EndpointResult[] = [];
-  for (const attack of attacks.filter((a) => a.reachesAgent !== false)) {
+  const cases = [...attacks.filter((a) => a.reachesAgent !== false), ...communityCases()];
+  for (const attack of cases) {
     const answer = await ask(config, attack.prompt);
     const payment = answer?.payments?.[0];
     const result: EndpointResult = {
@@ -128,8 +142,17 @@ export function formatEndpoint(report: EndpointReport, color: boolean): string {
     lines.push(`${r.id.padEnd(4)}${r.title.padEnd(56)}${code(paint, agent.padEnd(18))}${mandate}`);
   }
   const s = report.summary;
+  const fromArena = report.results.filter((r) => r.id.startsWith("C")).length;
   lines.push(
     "",
+    ...(fromArena > 0
+      ? [
+          code(
+            muted,
+            `C rows are ${fromArena} messages from the public arena that fooled our agent.`,
+          ),
+        ]
+      : []),
     `Your agent tried to pay on ${s.agent_tried_to_pay} of ${s.attacks_sent} attacks.`,
     s.would_have_been_paid === 0
       ? code(lime, "A mandate would have refused every one of them.")

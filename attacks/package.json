@@ -30,6 +30,7 @@
   "files": [
     "dist",
     "wasm",
+    "community.json",
     "README.md"
   ],
   "scripts": {
