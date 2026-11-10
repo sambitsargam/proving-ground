@@ -1,6 +1,6 @@
 {
   "name": "provingground-cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Attack an agent's payments: 25 scripted attacks against a contract-enforced mandate on NEAR",
   "license": "MIT",
   "keywords": [
