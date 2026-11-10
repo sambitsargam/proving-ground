@@ -441,7 +441,6 @@
   transform: none;
 }
 
-
 @media (max-width: 520px) {
   .story-stage {
     height: 760px;
