@@ -213,10 +213,6 @@ Agents tested this way can be listed on the [leaderboard](https://provingground-
 - **Hosting and CI:** Render and GitHub Actions. Wasmtime 27 runs the checker's tests.
 - **AI coding tools were used during development.** Parts of the code and documentation were written with AI assistance and reviewed by the team.
 
-## Also submitted at NEAR HACKATHON by the same team
-
-[THESIS_PROJECT_NAME] — [THESIS_REPO_URL]
-
 ## License
 
 [MIT](LICENSE)
