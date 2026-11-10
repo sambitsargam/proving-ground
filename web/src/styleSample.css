@@ -175,7 +175,7 @@
 
 .message {
   padding: var(--space-2);
-  border-radius: 10px;
+  border-radius: var(--radius-card);
   background: var(--surface-2);
   border-left: 2px solid var(--border);
 }
@@ -314,7 +314,7 @@
 
 .swatch-chip {
   height: 48px;
-  border-radius: 10px;
+  border-radius: var(--radius-card);
   border: var(--hairline);
 }
 

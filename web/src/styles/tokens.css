@@ -28,8 +28,9 @@
   --glow-amber: 0 0 24px rgba(255, 176, 32, 0.35);
 
   /* Shape */
-  --radius-card: 14px;
-  --radius-pill: 999px;
+  /* Machined, not soft: the technical look the owner chose on Nov 10 over the original 14px. */
+  --radius-card: 6px;
+  --radius-control: 4px;
   --hairline: 1px solid var(--border);
 
   /* 8px grid */
@@ -45,6 +46,10 @@
   --font-display: "Space Grotesk Variable", system-ui, sans-serif;
   --font-body: "Inter Variable", system-ui, sans-serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+
+  /* Blueprint grid and HUD brackets */
+  --grid-line: rgba(28, 33, 48, 0.55);
+  --bracket: rgba(110, 139, 255, 0.75);
 
   /* Motion */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);

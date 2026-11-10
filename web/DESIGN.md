@@ -24,8 +24,10 @@ All of them live in [src/styles/tokens.css](src/styles/tokens.css). Nothing else
 | `--amber` | `#FFB020` | Parked, waiting for the owner |
 | `--glow-cobalt` | `0 0 24px rgba(47,91,255,.35)` | The active control only |
 | `--glow-lime` | `0 0 24px rgba(198,255,26,.30)` | The layer that stopped an attack only |
-| `--radius-card` | `14px` | Cards |
-| `--radius-pill` | `999px` | Buttons, status labels, badge |
+| `--radius-card` | `6px` | Cards, terminals, the HUD frame |
+| `--radius-control` | `4px` | Buttons, chips, status labels, toasts |
+| `--grid-line` | `rgba(28,33,48,.55)` | The blueprint grid behind every page |
+| `--bracket` | `rgba(110,139,255,.75)` | HUD corner brackets on cards |
 | `--space-1` … `--space-12` | 8px to 96px | Everything is on an 8px grid |
 
 The badge SVG spells out token values as hex, because it has to render on its own in other teams' READMEs.
@@ -56,6 +58,16 @@ Ratios against each background, computed with the WCAG formula. Body text needs 
 | Mono | JetBrains Mono | Account IDs, reason codes, transaction hashes, the attack log |
 
 All three are OFL-licensed and self-hosted from npm packages, with `font-display: swap`. The page makes no font requests to anyone else.
+
+## Technical layer
+
+On Nov 10 the owner chose a more technical, hacker-ish feel. The palette and its meanings did not change. What changed:
+
+- Corners went from 14px to 6px, and every card carries cobalt HUD corner brackets.
+- A 32px blueprint grid sits behind every page, fading out downward, with faint scanlines over everything.
+- Buttons, navigation, chips, labels, counters and the ticker are set in JetBrains Mono. Headlines stay in Space Grotesk and body text in Inter.
+- Section labels read like code comments (`// the suite`).
+- The hero vault sits in a HUD frame with readouts from `deployments/testnet.json`, and a terminal types out a run of the real CLI once, in its own output format.
 
 ## Meaning, not decoration
 

@@ -93,6 +93,7 @@ export function Arena() {
   return (
     <div className="container arena">
       <section className="arena-chat" aria-labelledby="arena-title">
+        <p className="eyebrow arena-eyebrow">Live target · NEAR testnet</p>
         <h1 id="arena-title" className="arena-title">
           Arena
         </h1>

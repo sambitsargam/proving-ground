@@ -1,8 +1,10 @@
 import { type CSSProperties, type KeyboardEvent, useEffect, useState } from "react";
 import mockReport from "../../../attacks/report.json";
 import liveReport from "../../../attacks/report.testnet.json";
+import deployment from "../../../deployments/testnet.json";
 import { AttackStory } from "../components/AttackStory.tsx";
 import { Hero3D } from "../components/Hero3D.tsx";
+import { HeroTerminal } from "../components/HeroTerminal.tsx";
 import { Icon } from "../components/Icon.tsx";
 import { Reveal } from "../components/Reveal.tsx";
 import { type ReportResult, SuiteTable } from "../components/SuiteTable.tsx";
@@ -246,8 +248,33 @@ export function Landing() {
             </div>
           </div>
           <div className="hero-visual">
-            <div className="hero-halo" aria-hidden="true" />
-            <Hero3D />
+            <div className="hud hero-hud">
+              <div className="hero-halo" aria-hidden="true" />
+              <span className="hud-cross" aria-hidden="true" />
+              <dl className="hud-readout">
+                <div className="hud-tl">
+                  <dt>Vault</dt>
+                  <dd>{deployment.vault}</dd>
+                </div>
+                <div className="hud-tr">
+                  <dt>Mandate</dt>
+                  <dd>#{deployment.mandate.id} · 1 payee</dd>
+                </div>
+                <div className="hud-bl">
+                  <dt>Wasm sha-256</dt>
+                  <dd>
+                    {deployment.vault_wasm_sha256.slice(0, 8)}…
+                    {deployment.vault_wasm_sha256.slice(-4)}
+                  </dd>
+                </div>
+                <div className="hud-br">
+                  <dt>Checker</dt>
+                  <dd>OutLayer TEE</dd>
+                </div>
+              </dl>
+              <Hero3D />
+            </div>
+            <HeroTerminal />
           </div>
         </div>
         <Ticker />
@@ -303,6 +330,7 @@ export function Landing() {
 
       <section className="container section" aria-labelledby="log-title">
         <Reveal>
+          <p className="eyebrow">attack.log</p>
           <h2 id="log-title" className="section-title">
             {hasLive ? "Live attack log" : "From the live testnet run"}
           </h2>
