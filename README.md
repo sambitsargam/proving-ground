@@ -80,7 +80,7 @@ The vault code's SHA-256 is `c6b3aa8e4fdb6c208e368cd1104e8001585450283835f80037c
 
 An honest payment went through end to end, through the real OutLayer checker and model: [BzzHg9tu…](https://testnet.nearblocks.io/txns/BzzHg9tu9scMYH7YcJPHaUZvyB2wtRp6onckPtdK4328). Its log shows the contract rules passing, OutLayer running the checker (about 2 seconds, 0.0013 NEAR), the checker's `ALLOW`, and the transfer settling.
 
-**Not locked yet.** The vault and agent accounts still have their full-access keys, so whoever holds them could redeploy the vault or bypass the agent's key. Removing them is the last deployment step ([DEPLOY.md](docs/DEPLOY.md#7-lock-the-vault)) and can't be undone. Check the current state with `view_access_key_list`.
+**Locked on Nov 14, 2026.** The vault account has no access keys at all, so nobody can redeploy or change its code. The agent account has one key left: the function call key that can only call `request_payment` on the vault. Check both with `view_access_key_list`. A side effect: the agent key's gas allowance (4.96 NEAR left) can't be topped up, and once it runs out the arena needs a new agent account.
 
 ## Attack suite
 
@@ -134,7 +134,7 @@ The full list is in [THREAT_MODEL.md](docs/THREAT_MODEL.md#limits). The main one
 - **The checker is a model.** It adds a chance of catching bad payments inside the limits, and no guarantee. Its 32-case eval also shaped its prompt, so it's a regression check, not an accuracy figure.
 - **Checker downtime stops payments.** They wait for the owner. Nothing is approved automatically.
 - **Metadata is public.** Payees, amounts, limits, timing and verdict codes are on-chain. Only the invoice and purpose text are private.
-- **The contract is unaudited,** and the testnet vault is not locked yet (see above).
+- **The contract is unaudited.** The testnet vault is locked (see above), so bugs are fixed with a new deployment.
 
 What the agent's function-call key can and can't do:
 

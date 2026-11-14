@@ -4,7 +4,7 @@ Proving Ground treats the AI as untrusted. The question this document answers is
 
 **Short answer:** vault funds can only go to a payee the owner listed, within the limits the owner set, or back to the owner. A fully compromised agent or checker cannot change that. They can still cause a bad payment to a listed payee, within those limits, and they can waste fees and block payments.
 
-**Status:** the vault is deployed on testnet with the checker running in OutLayer. An honest payment has gone through the whole path, and 22 of the 25 attacks have run there with real transactions and the real model, with nothing lost. The defenses below also have unit tests, sandbox tests against a mock of OutLayer, and a simulated runtime. The testnet vault is not locked yet: see path 5.
+**Status:** the vault is deployed on testnet with the checker running in OutLayer. An honest payment has gone through the whole path, and 22 of the 25 attacks have run there with real transactions and the real model, with nothing lost. The defenses below also have unit tests, sandbox tests against a mock of OutLayer, and a simulated runtime. The testnet vault was locked on Nov 14, 2026: it has no access keys, and the agent keeps only its function call key. See path 5.
 
 Rules and reason codes are defined in [MANDATES.md](MANDATES.md).
 

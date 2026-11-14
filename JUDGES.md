@@ -62,7 +62,6 @@ That line comes from running all 25 attacks against the real vault WASM with an 
 
 ## 4. What isn't done
 
-- **The testnet vault isn't locked yet.** Its account and the agent's still have full-access keys. Locking is the last step in [DEPLOY.md](docs/DEPLOY.md#7-lock-the-vault).
 - **The contract is unaudited.**
 - **Three attacks (A19, A20, A23) need control of the checker,** so they run in mock mode and on a local node, but not on testnet.
 - **The checker's eval is small:** 32 cases that also shaped its prompt.
