@@ -6,6 +6,8 @@ AI agents that hold money get talked out of it. Freysa lost its $47K prize pool 
 
 - Site: https://provingground-web.onrender.com
 - Arena (attack the live agent): https://provingground-web.onrender.com/arena
+- Demo video (88 s): https://x.com/pg_vault/status/2121606003859058824
+- Technical walkthrough (5 min: code, on-chain receipts, attack suite): https://youtu.be/PA7tC3oSsTo
 - Vault on testnet: [provingground-vault.testnet](https://testnet.nearblocks.io/address/provingground-vault.testnet)
 - Reviewers: [JUDGES.md](JUDGES.md) is the short path.
 

@@ -2,6 +2,8 @@
 
 Proving Ground puts an AI agent's payments behind a mandate its owner signs, enforced by a NEAR contract. The agent can be fully jailbroken and the money still only goes where the owner allowed. The model in the loop can only say no.
 
+Videos: the [88-second demo](https://x.com/pg_vault/status/2121606003859058824) and the [5-minute technical walkthrough](https://youtu.be/PA7tC3oSsTo), which covers the code, the on-chain receipts of a real payment and the attack suite.
+
 ## 1. Run it (no keys needed)
 
 Prerequisites: Rust (the pinned 1.95.0 installs itself through `rustup`), cargo-near 0.22.0, Node.js 24, and optionally Wasmtime 27. The [README](README.md#prerequisites) has the install commands.
